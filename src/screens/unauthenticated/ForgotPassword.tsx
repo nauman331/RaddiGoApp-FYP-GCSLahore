@@ -76,7 +76,7 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
     }
 
     const handleVerifyOTP = async () => {
-        if (!otp || otp.length !== 6) {
+        if (otp?.length !== 6) {
             Toast.show({
                 type: ALERT_TYPE.WARNING,
                 title: 'Invalid OTP',
@@ -249,11 +249,7 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                             </TouchableOpacity>
 
                             <View className="mt-4 items-center">
-                                {!canResend ? (
-                                    <Text className="text-gray-600 font-semibold">
-                                        Resend code in <Text className="text-emerald-600 font-bold">{formatTime(timer)}</Text>
-                                    </Text>
-                                ) : (
+                                {canResend ? (
                                     <TouchableOpacity
                                         onPress={handleResendOTP}
                                         disabled={isSendingOTP}
@@ -262,6 +258,10 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                                             {isSendingOTP ? 'Sending...' : 'Resend Code'}
                                         </Text>
                                     </TouchableOpacity>
+                                ) : (
+                                    <Text className="text-gray-600 font-semibold">
+                                        Resend code in <Text className="text-emerald-600 font-bold">{formatTime(timer)}</Text>
+                                    </Text>
                                 )}
                             </View>
                         </>

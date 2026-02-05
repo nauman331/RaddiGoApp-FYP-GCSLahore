@@ -2,7 +2,7 @@ import "./global.css"
 import { NavigationContainer } from "@react-navigation/native"
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import CombinedNav from "./src/navigation/CombinedNav";
-import { View, Alert } from "react-native";
+import { Alert } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from 'redux-persist/integration/react';
@@ -16,8 +16,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Loading from "./src/components/Loading";
 import { apiURL } from "./src/utils/exports";
-import { setuser } from "./src/store/slices/authSlice";
-import { logout } from "./src/store/slices/authSlice";
+import { setuser, logout } from "./src/store/slices/authSlice";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -64,6 +63,8 @@ const AppContent: React.FC = () => {
       console.log("User data fetched successfully:", data.user);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch user data");
+      console.error("Error fetching user data:", error);
+      dispatch(logout());
     } finally {
       setLoading(false);
     }
@@ -109,11 +110,9 @@ const AppContent: React.FC = () => {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <View className="flex-1 bg-gray-100 p-2">
-          <AlertNotificationRoot>
-            <CombinedNav />
-          </AlertNotificationRoot>
-        </View>
+        <AlertNotificationRoot>
+          <CombinedNav />
+        </AlertNotificationRoot>
       </NavigationContainer>
     </SafeAreaProvider>
   );
