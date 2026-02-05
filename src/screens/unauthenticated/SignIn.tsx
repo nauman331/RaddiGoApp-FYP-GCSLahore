@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView, Image } from 'reac
 import React, { useState } from 'react'
 import { ArrowLeft, Mail, Lock, Eye, EyeClosed } from 'lucide-react-native'
 import { GoogleIcon, FacebookIcon } from '../../assets/Icons'
-import LogoImage from "../../assets/logo.png"
+import LogoImage from "../../assets/half-logo.jpeg"
 import { useDispatch } from 'react-redux'
 import { login } from '../../store/slices/authSlice'
 import { useSubmit } from "../../apiHooks/useSubmit"
@@ -46,14 +46,15 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
     }
 
     return (
-        <View className='bg-white rounded-2xl p-2 flex-1'>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-                <ArrowLeft />
+        <View className='bg-gray-200 rounded-2xl p-2 flex-1'>
+            <TouchableOpacity
+                className='bg-emerald-600 ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
+                onPress={() => navigation.goBack()}>
+                <ArrowLeft color={"white"} />
             </TouchableOpacity>
-            <Text className="text-lg font-semibold mt-3">Welcome Back</Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-                <View className="mt-5 bg-gray-200 p-4 rounded-2xl">
+                <View className="mt-5 bg-white shadow-lg p-4 rounded-2xl">
                     <View className='flex-row items-center justify-between'>
                         <Text className="text-emerald-600 font-bold">Log in to RaddiGo</Text>
                         <Image className='h-14 w-14 rounded-lg' source={LogoImage} alt='RaddiGo Logo' />

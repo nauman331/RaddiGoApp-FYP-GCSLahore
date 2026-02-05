@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Image } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Mail, Lock, Eye, EyeClosed } from 'lucide-react-native'
-import LogoImage from "../../assets/logo.png"
+import LogoImage from "../../assets/half-logo.jpeg"
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
@@ -168,16 +168,15 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
     };
 
     return (
-        <View className='bg-white rounded-2xl p-2 flex-1'>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-                <ArrowLeft />
+        <View className='bg-gray-200 rounded-2xl p-2 flex-1'>
+            <TouchableOpacity
+                className='bg-emerald-600 ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
+                onPress={() => navigation.goBack()}>
+                <ArrowLeft color={"white"} />
             </TouchableOpacity>
-            <Text className="text-lg font-semibold mt-3">
-                {step === 1 ? "Forgot Password" : step === 2 ? "Verify OTP" : "Reset Password"}
-            </Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-                <View className="mt-5 bg-gray-200 p-4 rounded-2xl">
+                <View className="mt-5 bg-white shadow-lg p-4 rounded-2xl">
                     <View className='flex-row items-center justify-between'>
                         <Text className="text-emerald-600 font-bold">
                             {step === 1 ? "Reset Your Password" : step === 2 ? "Enter Verification Code" : "Create New Password"}
