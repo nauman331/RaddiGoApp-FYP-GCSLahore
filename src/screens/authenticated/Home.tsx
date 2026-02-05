@@ -1,5 +1,5 @@
 import { View, Text, Image, TouchableOpacity } from 'react-native'
-import React, { useCallback } from 'react'
+import React from 'react'
 import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
 import { useSelector } from 'react-redux'
@@ -27,7 +27,7 @@ const Home: React.FC = ({ navigation }: any) => {
             </View>
 
             <TouchableOpacity
-                className={`bg-emerald-600 rounded-2xl p-4 mx-2 my-4 shadow-sm ${!isConnected ? "opacity-80" : ""}`}
+                className={`bg-emerald-600 rounded-2xl p-4 mx-2 my-4 shadow-sm ${isConnected ? "" : "opacity-80"}`}
                 onPress={() => navigation.navigate('Riders')}
             >
                 <Text className='text-white text-center font-bold text-lg'>{isConnected ? "New Order" : "Connecting..."}</Text>
