@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import { logout } from '../../store/slices/authSlice'
 import { User } from '../../types/map'
+import profileimg from "../../assets/profile.png"
 
 const Profile = () => {
     const dispatch = useDispatch();
@@ -24,7 +25,7 @@ const Profile = () => {
             </View>
             <View className='-mt-12 justify-center items-center'>
                 <View className='w-24 h-24 bg-white rounded-full border-4 border-white justify-center items-center shadow-lg'>
-                    <Image source={{ uri: userdata?.profilePicture }} className="w-24 h-24 rounded-full border-4 border-emerald-600" />
+                    <Image source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg} className="w-24 h-24 rounded-full border-4 border-emerald-600" />
                 </View>
             </View>
             {/* Profile Information */}

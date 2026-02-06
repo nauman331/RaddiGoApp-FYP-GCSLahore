@@ -4,6 +4,7 @@ import ProfilePic from "../assets/logo.png"
 import { Bell } from "lucide-react-native"
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
+import profileimg from "../assets/profile.png"
 
 const Header: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { username?: string } };
@@ -13,7 +14,7 @@ const Header: React.FC = () => {
         <View className='w-full bg-transparent py-4 px-4 flex-row items-center justify-between'>
             <View className='flex-row items-center'>
                 <Image
-                    source={ProfilePic}
+                    source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg}
                     alt="Profile Picture"
                     className='w-12 h-12 rounded-full border-2 border-gray-300'
                 />

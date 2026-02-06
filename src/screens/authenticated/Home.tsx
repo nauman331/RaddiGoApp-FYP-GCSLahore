@@ -16,12 +16,12 @@ const Home: React.FC = ({ navigation }: any) => {
             <View className='flex-row justify-between my-4 px-2'>
                 <View className='bg-white border-2 border-emerald-600 rounded-2xl p-4 flex-1 mr-2 shadow-sm'>
                     <Text className='text-emerald-600 text-lg font-bold mb-2'>Total Orders</Text>
-                    <Text className='text-gray-800 text-2xl font-bold'>24</Text>
+                    <Text className='text-gray-800 text-2xl font-bold'>0</Text>
                     <Text className='text-gray-600 text-sm mt-1'>This month</Text>
                 </View>
                 <View className='bg-white border-2 border-amber-600 rounded-2xl p-4 flex-1 ml-2 shadow-sm'>
                     <Text className='text-amber-600 text-lg font-bold mb-2'>Earnings</Text>
-                    <Text className='text-gray-800 text-2xl font-bold'>PKR 450</Text>
+                    <Text className='text-gray-800 text-2xl font-bold'>PKR 0</Text>
                     <Text className='text-gray-600 text-sm mt-1'>This month</Text>
                 </View>
             </View>

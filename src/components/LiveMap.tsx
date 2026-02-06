@@ -1,8 +1,11 @@
-import { View } from 'react-native'
+import { View, Image } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import Loading from './Loading';
-import { LiveMapProps } from '../types/map'; // <-- added import
+import { LiveMapProps } from '../types/map';
+
+const riderIcon = require('../assets/rider-icon.png');
+const scrapHomeIcon = require('../assets/scrap-home.png');
 
 
 
@@ -71,14 +74,19 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
                         coordinate={coordinates}
                         title="Your Location"
                         description="Seller current location"
-                        pinColor="green"
-                    />
+                    >
+                        <Image source={scrapHomeIcon} style={{ width: 40, height: 40 }} />
+                    </Marker>
                 )}
                 {pickupLocation && !coordinates && (
-                    <Marker coordinate={pickupLocation} title="Pickup Location" pinColor="green" />
+                    <Marker coordinate={pickupLocation} title="Pickup Location">
+                        <Image source={scrapHomeIcon} style={{ width: 40, height: 40 }} />
+                    </Marker>
                 )}
                 {dropoffLocation && !coordinates && (
-                    <Marker coordinate={dropoffLocation} title="Drop-off Location" pinColor="red" />
+                    <Marker coordinate={dropoffLocation} title="Drop-off Location">
+                        <Image source={riderIcon} style={{ width: 40, height: 40 }} />
+                    </Marker>
                 )}
 
                 {/* Route line from OSRM */}

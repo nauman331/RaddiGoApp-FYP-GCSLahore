@@ -15,8 +15,8 @@ const Riders = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
-    const pickupLocation = { latitude: 30.3753, longitude: 76.3294 };
-    const dropoffLocation = { latitude: 30.7046, longitude: 76.7179 };
+    const pickupLocation = { latitude: 31.5204, longitude: 74.3587 }; // Fortress Stadium, Lahore
+    const dropoffLocation = { latitude: 31.4695, longitude: 74.2645 }; // Packages Mall, Lahore
     // add a ref to control the BottomSheet
     const bottomSheetRef = useRef<any>(null);
     const [locating, setLocating] = useState(false);
@@ -66,7 +66,7 @@ const Riders = () => {
 
             <TouchableOpacity
                 activeOpacity={0.9}
-                className="absolute bottom-20 self-center flex-row items-center bg-emerald-600 border border-white px-8 py-5 rounded-full shadow-lg z-50"
+                className="absolute bottom-28 self-center flex-row items-center bg-emerald-600 border border-white px-8 py-5 rounded-full shadow-lg z-50"
                 onPress={() => bottomSheetRef.current?.present?.()}
             >
                 <Truck color="#fff" size={20} strokeWidth={2} style={{ marginRight: 8 }} />
