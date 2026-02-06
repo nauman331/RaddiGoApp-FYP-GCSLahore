@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Image } from 'react-native'
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, Linking } from 'react-native'
 import React, { useState } from 'react'
 import { ArrowLeft, Mail, Lock, Eye, EyeClosed } from 'lucide-react-native'
 import { GoogleIcon, FacebookIcon } from '../../assets/Icons'
@@ -9,7 +9,8 @@ import { useSubmit } from "../../apiHooks/useSubmit"
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification';
 
 
-const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
+const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
+    const role = route?.params?.role || 'seller';
     const dispatch = useDispatch();
     const { mutateAsync, isPending } = useSubmit({
         endpoint: 'login',
@@ -18,6 +19,24 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
     const [email, setEmail] = useState<string>('')
     const [password, setPassword] = useState<string>('')
     const [showPassword, setShowPassword] = useState<boolean>(false)
+
+    // Dynamic theme colors based on role
+    const themeColors = {
+        primary600: role === 'seller' ? '#059669' : '#d97706',
+        primary500: role === 'seller' ? '#10b981' : '#f59e0b',
+    }
+
+    const handleContactSupport = () => {
+        // Replace with your actual website URL
+        const websiteUrl = 'https://your-raddigo-website.com/contact'
+        Linking.openURL(websiteUrl).catch(err => {
+            Toast.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: 'Unable to open website',
+            });
+        });
+    }
 
     const Login = async () => {
         if (!email || !password) {
@@ -48,7 +67,8 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
     return (
         <View className='bg-gray-200 rounded-2xl p-2 flex-1'>
             <TouchableOpacity
-                className='bg-emerald-600 ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
+                style={{ backgroundColor: themeColors.primary600 }}
+                className="ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full"
                 onPress={() => navigation.goBack()}>
                 <ArrowLeft color={"white"} />
             </TouchableOpacity>
@@ -56,7 +76,7 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
             <ScrollView showsVerticalScrollIndicator={false}>
                 <View className="mt-5 bg-white shadow-lg p-4 rounded-2xl">
                     <View className='flex-row items-center justify-between'>
-                        <Text className="text-emerald-600 font-bold">Log in to RaddiGo</Text>
+                        <Text style={{ color: themeColors.primary600 }} className="font-bold">Log in to RaddiGo</Text>
                         <Image className='h-14 w-14 rounded-lg' source={LogoImage} alt='RaddiGo Logo' />
                     </View>
 
@@ -71,7 +91,8 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 onChangeText={(text) => setEmail(text)}
                                 placeholder="Enter your email"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                style={{ color: themeColors.primary500 }}
+                                className="flex-1 h-full px-2 py-1 font-bold"
                             />
                         </View>
                     </View>
@@ -86,7 +107,8 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 onChangeText={(text) => setPassword(text)}
                                 placeholder="Enter your Password"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                style={{ color: themeColors.primary500 }}
+                                className="flex-1 h-full px-2 py-1 font-bold"
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="ml-2">
 
@@ -98,7 +120,8 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
                     <TouchableOpacity
                         onPress={Login}
                         disabled={isPending}
-                        className="bg-emerald-600 mt-6 rounded-full h-12 items-center justify-center">
+                        style={{ backgroundColor: themeColors.primary600 }}
+                        className="mt-6 rounded-full h-12 items-center justify-center">
                         <Text className="text-white font-bold text-lg">
                             {isPending ? 'Logging in...' : 'Log In'}
                         </Text>
@@ -107,31 +130,48 @@ const SignIn: React.FC<{ navigation: any }> = ({ navigation }) => {
                     <TouchableOpacity
                         onPress={() => navigation.navigate("ForgotPassword")}
                         className="mt-4 justify-center">
-                        <Text className="text-emerald-600 font-bold">Forgot Password?</Text>
+                        <Text style={{ color: themeColors.primary600 }} className="font-bold">Forgot Password?</Text>
                     </TouchableOpacity>
+                    {
+                        role === 'seller' && (
+                            <>
 
-                    <View className="flex-row items-center my-5">
-                        <View className="flex-1 h-[1px] bg-gray-400" />
-                        <Text className="text-gray-400 font-semibold mx-3">OR</Text>
-                        <View className="flex-1 h-[1px] bg-gray-400" />
+                                <View className="flex-row items-center my-5">
+                                    <View className="flex-1 h-[1px] bg-gray-400" />
+                                    <Text className="text-gray-400 font-semibold mx-3">OR</Text>
+                                    <View className="flex-1 h-[1px] bg-gray-400" />
+                                </View>
+                                <TouchableOpacity
+                                    style={{ borderColor: themeColors.primary600 }}
+                                    className="flex-row items-center justify-center bg-white border-2 rounded-full h-12 mb-3">
+                                    <GoogleIcon />
+                                    <Text style={{ color: themeColors.primary600 }} className="font-bold text-base ml-2">Continue with Google</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={{ borderColor: themeColors.primary600 }}
+                                    className="flex-row items-center justify-center bg-white border-2 rounded-full h-12">
+                                    <FacebookIcon />
+                                    <Text style={{ color: themeColors.primary600 }} className="font-bold text-base ml-2">Continue with Facebook</Text>
+                                </TouchableOpacity>
+                            </>
+                        )
+                    }
+                </View>
+                {role === 'seller' ? (
+                    <View className="flex-row justify-center mt-5 ml-5">
+                        <Text className="text-gray-600 font-semibold">Don't have an account? </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+                            <Text style={{ color: themeColors.primary600 }} className="font-bold">Sign Up</Text>
+                        </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity className="flex-row items-center justify-center bg-white border-2 border-emerald-600 rounded-full h-12 mb-3">
-                        <GoogleIcon />
-                        <Text className="text-emerald-600 font-bold text-base ml-2">Continue with Google</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity className="flex-row items-center justify-center bg-white border-2 border-emerald-600 rounded-full h-12">
-                        <FacebookIcon />
-                        <Text className="text-emerald-600 font-bold text-base ml-2">Continue with Facebook</Text>
-                    </TouchableOpacity>
-                </View>
-                <View className="flex-row justify-center mt-5 ml-5">
-                    <Text className="text-gray-600 font-semibold">Don't have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-                        <Text className="text-emerald-600 font-bold">Sign Up</Text>
-                    </TouchableOpacity>
-                </View>
+                ) : (
+                    <View className="flex-row justify-center mt-5 ml-5">
+                        <TouchableOpacity onPress={handleContactSupport}>
+                            <Text style={{ color: themeColors.primary600 }} className="font-bold">Contact Support for Buyer Account</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </ScrollView>
         </View>
     )
