@@ -1,16 +1,16 @@
-import { View, Text, Image, TouchableOpacity } from 'react-native'
+import { View, Text, Image, TouchableOpacity, StatusBar } from 'react-native'
 import React from 'react'
 import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
-
 const Home: React.FC = ({ navigation }: any) => {
     const { isConnected } = useSelector((state: RootState) => state.socket);
 
 
     return (
         <View className='bg-white rounded-2xl p-2 flex-1'>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
             <Header />
             {/* two boxes above */}
             <View className='flex-row justify-between my-4 px-2'>

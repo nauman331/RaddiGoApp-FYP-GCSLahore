@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, Platform } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Home from "../screens/authenticated/Home";
 import Profile from "../screens/authenticated/Profile";
 import { Home as HomeIcon, User, MapPin, Activity } from "lucide-react-native";
@@ -8,21 +9,21 @@ import Riders from "../screens/authenticated/Riders";
 const Tab = createBottomTabNavigator();
 
 export default function AuthenticatedStack() {
+    const insets = useSafeAreaInsets();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarStyle: {
                     backgroundColor: '#eee',
-                    height: Platform.OS === 'ios' ? 90 : 70,
-                    paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+                    height: Platform.OS === 'ios' ? 90 : 70 + insets.bottom,
+                    paddingBottom: Platform.OS === 'ios' ? 30 + insets.bottom : 10 + insets.bottom,
                     paddingTop: 10,
                     borderTopWidth: 1,
                     shadowOpacity: 0.1,
                     shadowRadius: 12,
                     position: 'absolute',
-                    marginHorizontal: -12,
-                    marginBottom: -12,
                 },
                 tabBarActiveTintColor: '#10b981',
                 tabBarInactiveTintColor: '#9CA3AF',

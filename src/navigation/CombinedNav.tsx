@@ -1,10 +1,11 @@
-import { useSelector } from 'react-redux'
+// import { useSelector } from 'react-redux'
 import React from 'react'
 import AuthenticatedStack from './authenticated'
 import UnauthenticatedStack from './unauthenticated'
 
 const CombinedNav: React.FC = () => {
-    const { token } = useSelector((state: any) => state.auth);
+    // const { token } = useSelector((state: any) => state.auth);
+    const token = true;
     return token ? <AuthenticatedStack /> : <UnauthenticatedStack />
 }
 
