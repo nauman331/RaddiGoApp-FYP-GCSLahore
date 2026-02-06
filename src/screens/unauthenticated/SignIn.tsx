@@ -126,16 +126,14 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                             {isPending ? 'Logging in...' : 'Log In'}
                         </Text>
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate("ForgotPassword")}
-                        className="mt-4 justify-center">
-                        <Text style={{ color: themeColors.primary600 }} className="font-bold">Forgot Password?</Text>
-                    </TouchableOpacity>
                     {
                         role === 'seller' && (
                             <>
-
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate("ForgotPassword")}
+                                    className="mt-4 justify-center">
+                                    <Text style={{ color: themeColors.primary600 }} className="font-bold">Forgot Password?</Text>
+                                </TouchableOpacity>
                                 <View className="flex-row items-center my-5">
                                     <View className="flex-1 h-[1px] bg-gray-400" />
                                     <Text className="text-gray-400 font-semibold mx-3">OR</Text>
