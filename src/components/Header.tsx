@@ -1,14 +1,19 @@
 import { View, Text, Image, TouchableOpacity } from 'react-native'
 import React from 'react'
-import ProfilePic from "../assets/logo.png"
 import { Bell } from "lucide-react-native"
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
 import profileimg from "../assets/profile.png"
 
 const Header: React.FC = () => {
-    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { username?: string } };
+    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { username?: string, role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
+    const role = userdata?.role || 'seller';
+
+    const themeColors = {
+        primary: role === 'buyer' ? '#d97706' : '#10b981',
+        primaryLight: role === 'buyer' ? '#fbbf24' : '#34d399',
+    };
 
     return (
         <View className='w-full bg-transparent py-4 px-4 flex-row items-center justify-between'>
@@ -25,7 +30,14 @@ const Header: React.FC = () => {
             </View>
             <TouchableOpacity
                 onPress={() => console.log("Notifications")}
-                className='bg-gray-100 border-2 border-gray-300 p-2 rounded-full relative'>
+                style={{
+                    backgroundColor: '#f3f4f6',
+                    borderWidth: 2,
+                    borderColor: themeColors.primaryLight,
+                    padding: 8,
+                    borderRadius: 9999,
+                    position: 'relative'
+                }}>
                 <Bell size={16} color="#4B5563" />
                 <View style={{
                     position: 'absolute',

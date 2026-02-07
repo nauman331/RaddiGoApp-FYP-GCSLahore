@@ -15,9 +15,8 @@ const Riders = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
-    const pickupLocation = { latitude: 31.5204, longitude: 74.3587 }; // Fortress Stadium, Lahore
-    const dropoffLocation = { latitude: 31.4695, longitude: 74.2645 }; // Packages Mall, Lahore
-    // add a ref to control the BottomSheet
+    const pickupLocation = { latitude: 31.5204, longitude: 74.3587 };
+    const dropoffLocation = { latitude: 31.4695, longitude: 74.2645 };
     const bottomSheetRef = useRef<any>(null);
     const [locating, setLocating] = useState(false);
 

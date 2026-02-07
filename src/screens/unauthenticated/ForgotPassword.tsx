@@ -5,7 +5,9 @@ import LogoImage from "../../assets/half-logo.jpeg"
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
-const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
+const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
+    const role = route?.params?.role || 'seller';
+
     const { mutateAsync: sendOTP, isPending: isSendingOTP } = useSubmit({
         endpoint: 'resend-verification-email',
     });
@@ -27,6 +29,12 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
     const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
     const [timer, setTimer] = useState<number>(120);
     const [canResend, setCanResend] = useState<boolean>(false);
+
+    // Role-based theme colors
+    const themeColors = {
+        primary600: role === 'seller' ? '#059669' : '#d97706',
+        primary500: role === 'seller' ? '#10b981' : '#f59e0b',
+    };
 
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
@@ -170,7 +178,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
     return (
         <View className='bg-gray-200 rounded-2xl p-2 flex-1'>
             <TouchableOpacity
-                className='bg-emerald-600 ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
+                style={{ backgroundColor: themeColors.primary600 }}
+                className='ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
                 onPress={() => navigation.goBack()}>
                 <ArrowLeft color={"white"} />
             </TouchableOpacity>
@@ -178,7 +187,7 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
             <ScrollView showsVerticalScrollIndicator={false}>
                 <View className="mt-5 bg-white shadow-lg p-4 rounded-2xl">
                     <View className='flex-row items-center justify-between'>
-                        <Text className="text-emerald-600 font-bold">
+                        <Text className="font-bold" style={{ color: themeColors.primary600 }}>
                             {step === 1 ? "Reset Your Password" : step === 2 ? "Enter Verification Code" : "Create New Password"}
                         </Text>
                         <Image className='h-14 w-14 rounded-lg' source={LogoImage} alt='RaddiGo Logo' />
@@ -201,7 +210,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                                         placeholderTextColor="#9ca3af"
                                         keyboardType="email-address"
                                         autoCapitalize="none"
-                                        className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                        style={{ color: themeColors.primary500 }}
+                                        className="flex-1 h-full px-2 py-1 font-bold"
                                     />
                                 </View>
                             </View>
@@ -209,7 +219,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                             <TouchableOpacity
                                 onPress={handleSendOTP}
                                 disabled={isSendingOTP}
-                                className={`mt-6 rounded-full h-12 items-center justify-center ${isSendingOTP ? 'bg-emerald-400' : 'bg-emerald-600'}`}>
+                                style={{ backgroundColor: isSendingOTP ? themeColors.primary500 : themeColors.primary600 }}
+                                className="mt-6 rounded-full h-12 items-center justify-center">
                                 <Text className="text-white font-bold text-lg">
                                     {isSendingOTP ? 'Sending...' : 'Send OTP'}
                                 </Text>
@@ -233,7 +244,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                                         placeholderTextColor="#9ca3af"
                                         keyboardType="number-pad"
                                         maxLength={6}
-                                        className="flex-1 h-full px-2 py-1 font-bold text-emerald-500 text-center text-xl tracking-widest"
+                                        style={{ color: themeColors.primary500 }}
+                                        className="flex-1 h-full px-2 py-1 font-bold text-center text-xl tracking-widest"
                                     />
                                 </View>
                             </View>
@@ -241,7 +253,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                             <TouchableOpacity
                                 onPress={handleVerifyOTP}
                                 disabled={isVerifyingOTP}
-                                className={`mt-6 rounded-full h-12 items-center justify-center ${isVerifyingOTP ? 'bg-emerald-400' : 'bg-emerald-600'}`}>
+                                style={{ backgroundColor: isVerifyingOTP ? themeColors.primary500 : themeColors.primary600 }}
+                                className="mt-6 rounded-full h-12 items-center justify-center">
                                 <Text className="text-white font-bold text-lg">
                                     {isVerifyingOTP ? 'Verifying...' : 'Verify Code'}
                                 </Text>
@@ -253,13 +266,13 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                                         onPress={handleResendOTP}
                                         disabled={isSendingOTP}
                                         className="py-2">
-                                        <Text className="text-emerald-600 font-bold text-center">
+                                        <Text className="font-bold text-center" style={{ color: themeColors.primary600 }}>
                                             {isSendingOTP ? 'Sending...' : 'Resend Code'}
                                         </Text>
                                     </TouchableOpacity>
                                 ) : (
                                     <Text className="text-gray-600 font-semibold">
-                                        Resend code in <Text className="text-emerald-600 font-bold">{formatTime(timer)}</Text>
+                                        Resend code in <Text className="font-bold" style={{ color: themeColors.primary600 }}>{formatTime(timer)}</Text>
                                     </Text>
                                 )}
                             </View>
@@ -282,7 +295,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                                         onChangeText={(text) => setNewPassword(text)}
                                         placeholder="Enter new password"
                                         placeholderTextColor="#9ca3af"
-                                        className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                        style={{ color: themeColors.primary500 }}
+                                        className="flex-1 h-full px-2 py-1 font-bold"
                                     />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="ml-2">
                                         {showPassword ? <Eye /> : <EyeClosed />}
@@ -300,7 +314,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                                         onChangeText={(text) => setConfirmPassword(text)}
                                         placeholder="Confirm new password"
                                         placeholderTextColor="#9ca3af"
-                                        className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                        style={{ color: themeColors.primary500 }}
+                                        className="flex-1 h-full px-2 py-1 font-bold"
                                     />
                                     <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} className="ml-2">
                                         {showConfirmPassword ? <Eye /> : <EyeClosed />}
@@ -311,7 +326,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
                             <TouchableOpacity
                                 onPress={handleResetPassword}
                                 disabled={isResettingPassword}
-                                className={`mt-6 rounded-full h-12 items-center justify-center ${isResettingPassword ? 'bg-emerald-400' : 'bg-emerald-600'}`}>
+                                style={{ backgroundColor: isResettingPassword ? themeColors.primary500 : themeColors.primary600 }}
+                                className="mt-6 rounded-full h-12 items-center justify-center">
                                 <Text className="text-white font-bold text-lg">
                                     {isResettingPassword ? 'Resetting...' : 'Reset Password'}
                                 </Text>
@@ -322,8 +338,8 @@ const ForgotPassword: React.FC<{ navigation: any }> = ({ navigation }) => {
 
                 <View className="flex-row justify-center mt-5 ml-5 mb-5">
                     <Text className="text-gray-600 font-semibold">Remember your password? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate("SignIn")}>
-                        <Text className="text-emerald-600 font-bold">Sign In</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate("SignIn", { role })}>
+                        <Text className="font-bold" style={{ color: themeColors.primary600 }}>Sign In</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

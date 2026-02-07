@@ -3,6 +3,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
 import authReducer from "./slices/authSlice";
 import socketReducer from "./slices/socketSlice";
+import rideReducer from "./slices/rideSlice";
 
 // Only persist auth, NOT socket (socket instances cannot be serialized)
 const persistedAuthConfig = {
@@ -16,6 +17,7 @@ export const store = configureStore({
     reducer: {
         auth: persistedAuthReducer,
         socket: socketReducer, // Not persisted - socket state is volatile
+        ride: rideReducer, // Ride state management
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

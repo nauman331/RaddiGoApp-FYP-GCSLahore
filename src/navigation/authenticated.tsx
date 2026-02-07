@@ -1,15 +1,25 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, Platform } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 import Home from "../screens/authenticated/Home";
 import Profile from "../screens/authenticated/Profile";
+import BuyerRideScreen from "../screens/authenticated/BuyerRideScreen";
+import SellerRideScreen from "../screens/authenticated/SellerRideScreen";
 import { Home as HomeIcon, User, MapPin, Activity } from "lucide-react-native";
-import Riders from "../screens/authenticated/Riders";
 
 const Tab = createBottomTabNavigator();
 
 export default function AuthenticatedStack() {
     const insets = useSafeAreaInsets();
+    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
+    const role = userdata?.role || 'seller';
+
+    const RideScreen = role === 'buyer' ? BuyerRideScreen : SellerRideScreen;
+    const rideLabel = role === 'buyer' ? 'Pickups' : 'Find Buyers';
+    const primaryColor = role === 'buyer' ? '#d97706' : '#10b981';
+    const primaryColorLight = role === 'buyer' ? '#d9770615' : '#10b98115';
 
     return (
         <Tab.Navigator
@@ -25,7 +35,7 @@ export default function AuthenticatedStack() {
                     shadowRadius: 12,
                     position: 'absolute',
                 },
-                tabBarActiveTintColor: '#10b981',
+                tabBarActiveTintColor: primaryColor,
                 tabBarInactiveTintColor: '#9CA3AF',
                 tabBarShowLabel: true,
                 tabBarLabelStyle: {
@@ -41,7 +51,7 @@ export default function AuthenticatedStack() {
                         IconComponent = HomeIcon;
                     } else if (route.name === 'Activity') {
                         IconComponent = Activity;
-                    } else if (route.name === 'Riders') {
+                    } else if (route.name === 'Ride') {
                         IconComponent = MapPin;
                     } else if (route.name === 'Profile') {
                         IconComponent = User;
@@ -55,7 +65,7 @@ export default function AuthenticatedStack() {
                                 width: 44,
                                 height: 44,
                                 borderRadius: 22,
-                                backgroundColor: focused ? '#10b98115' : 'transparent',
+                                backgroundColor: focused ? primaryColorLight : 'transparent',
                             }}
                         >
                             {IconComponent && (
@@ -69,7 +79,7 @@ export default function AuthenticatedStack() {
                     );
                 },
             })}
-            initialRouteName="Home"
+            initialRouteName="Ride"
             backBehavior="history"
         >
             <Tab.Screen
@@ -87,10 +97,10 @@ export default function AuthenticatedStack() {
                 }}
             />
             <Tab.Screen
-                name="Riders"
-                component={Riders}
+                name="Ride"
+                component={RideScreen}
                 options={{
-                    tabBarLabel: 'Riders',
+                    tabBarLabel: rideLabel,
                 }}
             />
             <Tab.Screen

@@ -6,7 +6,8 @@ import LogoImage from "../../assets/half-logo.jpeg"
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification';
 
-const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
+const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
+    const role = route?.params?.role || 'seller';
     const { mutateAsync, isPending } = useSubmit({
         endpoint: 'register',
     });
@@ -16,7 +17,16 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
         email: '',
         phone: '',
         password: '',
+        role: role,
     });
+
+    // Role-based theme colors
+    const themeColors = {
+        primary600: role === 'seller' ? '#059669' : '#d97706',
+        primary500: role === 'seller' ? '#10b981' : '#f59e0b',
+        primary400: role === 'seller' ? '#34d399' : '#fbbf24',
+        primary300: role === 'seller' ? '#6ee7b7' : '#fcd34d',
+    };
 
     const handleInputChange = (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -30,7 +40,7 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
                 title: 'Success',
                 textBody: 'OTP sent to your email. Please verify.',
             });
-            navigation.navigate('VerifyOTP', { email: formData.email });
+            navigation.navigate('VerifyOTP', { email: formData.email, role });
         } catch (error: any) {
             Toast.show({
                 type: ALERT_TYPE.DANGER,
@@ -43,14 +53,15 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
     return (
         <View className='bg-gray-200 rounded-2xl p-2 flex-1'>
             <TouchableOpacity
-                className='bg-emerald-600 ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
+                style={{ backgroundColor: themeColors.primary600 }}
+                className='ml-3 mt-3 w-10 h-10 items-center justify-center rounded-full'
                 onPress={() => navigation.goBack()}>
                 <ArrowLeft color={"white"} />
             </TouchableOpacity>
             <ScrollView showsVerticalScrollIndicator={false}>
                 <View className="mt-5 bg-white shadow-lg p-4 rounded-2xl">
                     <View className='flex-row items-center justify-between'>
-                        <Text className="text-emerald-600 font-bold">Sign Up to RaddiGo</Text>
+                        <Text className="font-bold" style={{ color: themeColors.primary600 }}>Sign Up to RaddiGo</Text>
                         <Image className='h-14 w-14 rounded-lg' source={LogoImage} alt='RaddiGo Logo' />
                     </View>
 
@@ -63,7 +74,8 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 onChangeText={(text) => handleInputChange('username', text)}
                                 placeholder="Enter your username"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                style={{ color: themeColors.primary500 }}
+                                className="flex-1 h-full px-2 py-1 font-bold"
                             />
                         </View>
                     </View>
@@ -77,7 +89,8 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 onChangeText={(text) => handleInputChange('email', text)}
                                 placeholder="Enter your email"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                style={{ color: themeColors.primary500 }}
+                                className="flex-1 h-full px-2 py-1 font-bold"
                                 keyboardType="email-address"
                             />
                         </View>
@@ -92,7 +105,8 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 onChangeText={(text) => handleInputChange('phone', text)}
                                 placeholder="Enter your phone number"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                style={{ color: themeColors.primary500 }}
+                                className="flex-1 h-full px-2 py-1 font-bold"
                                 keyboardType="phone-pad"
                             />
                         </View>
@@ -107,14 +121,19 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 onChangeText={(text) => handleInputChange('password', text)}
                                 placeholder="Enter your Password"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full px-2 py-1 font-bold text-emerald-500"
+                                style={{ color: themeColors.primary500 }}
+                                className="flex-1 h-full px-2 py-1 font-bold"
                                 secureTextEntry
                             />
                             <Eye />
                         </View>
                     </View>
 
-                    <TouchableOpacity onPress={Register} disabled={isPending} className={`mt-6 rounded-full h-12 items-center justify-center ${isPending ? 'bg-emerald-400' : 'bg-emerald-600'}`}>
+                    <TouchableOpacity
+                        onPress={Register}
+                        disabled={isPending}
+                        style={{ backgroundColor: isPending ? themeColors.primary500 : themeColors.primary600 }}
+                        className="mt-6 rounded-full h-12 items-center justify-center">
                         <Text className="text-white font-bold text-lg">{isPending ? 'Signing Up...' : 'Sign Up'}</Text>
                     </TouchableOpacity>
 
@@ -124,20 +143,29 @@ const SignUp: React.FC<{ navigation: any }> = ({ navigation }) => {
                         <View className="flex-1 h-[1px] bg-gray-400" />
                     </View>
 
-                    <TouchableOpacity className="flex-row items-center justify-center bg-white border-2 border-emerald-600 rounded-full h-12 mb-3">
-                        <GoogleIcon />
-                        <Text className="text-emerald-600 font-bold text-base ml-2">Continue with Google</Text>
+                    <TouchableOpacity
+                        className="flex-row items-center justify-center bg-white rounded-full h-12 mb-3 border-2"
+                        style={{ borderColor: themeColors.primary600 }}>
+                        <GoogleIcon
+                            primaryColor={themeColors.primary500}
+                            secondaryColor={themeColors.primary600}
+                            tertiaryColor={themeColors.primary400}
+                            quaternaryColor={themeColors.primary600}
+                        />
+                        <Text className="font-bold text-base ml-2" style={{ color: themeColors.primary600 }}>Continue with Google</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity className="flex-row items-center justify-center bg-white border-2 border-emerald-600 rounded-full h-12">
-                        <FacebookIcon />
-                        <Text className="text-emerald-600 font-bold text-base ml-2">Continue with Facebook</Text>
+                    <TouchableOpacity
+                        className="flex-row items-center justify-center bg-white rounded-full h-12 border-2"
+                        style={{ borderColor: themeColors.primary600 }}>
+                        <FacebookIcon primaryColor={themeColors.primary500} />
+                        <Text className="font-bold text-base ml-2" style={{ color: themeColors.primary600 }}>Continue with Facebook</Text>
                     </TouchableOpacity>
                 </View>
                 <View className="flex-row justify-center mt-5 ml-5 mb-5">
                     <Text className="text-gray-600 font-semibold">Already have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate("SignIn")}>
-                        <Text className="text-emerald-600 font-bold">Log In</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate("SignIn", { role })}>
+                        <Text className="font-bold" style={{ color: themeColors.primary600 }}>Log In</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

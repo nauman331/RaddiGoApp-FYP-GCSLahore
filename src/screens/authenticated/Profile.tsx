@@ -4,34 +4,49 @@ import Header from '../../components/Header'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import { logout } from '../../store/slices/authSlice'
+import { resetRide } from '../../store/slices/rideSlice'
 import { User } from '../../types/map'
 import profileimg from "../../assets/profile.png"
 
 const Profile = () => {
     const dispatch = useDispatch();
     const userdata = useSelector((state: RootState) => state.auth.userdata) as User | null;
+    const role = userdata?.role || 'seller'; // Default to seller if role not set
+
+    // Role-based theme colors
+    const isBuyer = role === 'buyer';
+    const primaryColor = isBuyer ? 'amber' : 'emerald';
+    const primaryColorHex = isBuyer ? '#d97706' : '#059669';
 
     useEffect(() => {
     }, []);
+
     const handleLogout = () => {
         dispatch(logout());
+        dispatch(resetRide());
     }
+
     return (
         <View className='bg-white rounded-2xl p-2 flex-1'>
             <Header />
             {/* Profile Banner and Profile Picture */}
-            <View className='h-40 bg-emerald-600 justify-center items-center rounded-2xl'>
+            <View className='h-40 justify-center items-center rounded-2xl' style={{ backgroundColor: primaryColorHex }}>
                 <Text className='text-white text-2xl font-bold'>{userdata?.phone ?? "No phone number"}</Text>
+                <Text className='text-white/80 text-sm mt-1 capitalize'>{role || 'User'} Account</Text>
             </View>
             <View className='-mt-12 justify-center items-center'>
                 <View className='w-24 h-24 bg-white rounded-full border-4 border-white justify-center items-center shadow-lg'>
-                    <Image source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg} className="w-24 h-24 rounded-full border-4 border-emerald-600" />
+                    <Image
+                        source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg}
+                        className='w-24 h-24 rounded-full border-4'
+                        style={{ borderColor: primaryColorHex }}
+                    />
                 </View>
             </View>
             {/* Profile Information */}
             <View className='mt-4 px-4 bg-gray-200 mx-2 p-4 rounded-2xl'>
                 <Text className='text-2xl font-bold text-gray-800'>{userdata?.username ?? "User"}</Text>
-                <Text className='text-emerald-600 font-semibold'>{userdata?.email ?? "No Email"}</Text>
+                <Text className='font-semibold' style={{ color: primaryColorHex }}>{userdata?.email ?? "No Email"}</Text>
                 <Text className='mt-2 text-gray-600'>{userdata?.address ?? "No address"}</Text>
             </View>
 

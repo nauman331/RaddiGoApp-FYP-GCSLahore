@@ -24,6 +24,8 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
     const themeColors = {
         primary600: role === 'seller' ? '#059669' : '#d97706',
         primary500: role === 'seller' ? '#10b981' : '#f59e0b',
+        primary400: role === 'seller' ? '#34d399' : '#fbbf24',
+        primary300: role === 'seller' ? '#6ee7b7' : '#fcd34d',
     }
 
     const handleContactSupport = () => {
@@ -126,50 +128,41 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                             {isPending ? 'Logging in...' : 'Log In'}
                         </Text>
                     </TouchableOpacity>
-                    {
-                        role === 'seller' && (
-                            <>
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate("ForgotPassword")}
-                                    className="mt-4 justify-center">
-                                    <Text style={{ color: themeColors.primary600 }} className="font-bold">Forgot Password?</Text>
-                                </TouchableOpacity>
-                                <View className="flex-row items-center my-5">
-                                    <View className="flex-1 h-[1px] bg-gray-400" />
-                                    <Text className="text-gray-400 font-semibold mx-3">OR</Text>
-                                    <View className="flex-1 h-[1px] bg-gray-400" />
-                                </View>
-                                <TouchableOpacity
-                                    style={{ borderColor: themeColors.primary600 }}
-                                    className="flex-row items-center justify-center bg-white border-2 rounded-full h-12 mb-3">
-                                    <GoogleIcon />
-                                    <Text style={{ color: themeColors.primary600 }} className="font-bold text-base ml-2">Continue with Google</Text>
-                                </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate("ForgotPassword", { role })}
+                        className="mt-4 justify-center">
+                        <Text style={{ color: themeColors.primary600 }} className="font-bold">Forgot Password?</Text>
+                    </TouchableOpacity>
+                    <View className="flex-row items-center my-5">
+                        <View className="flex-1 h-[1px] bg-gray-400" />
+                        <Text className="text-gray-400 font-semibold mx-3">OR</Text>
+                        <View className="flex-1 h-[1px] bg-gray-400" />
+                    </View>
+                    <TouchableOpacity
+                        style={{ borderColor: themeColors.primary600 }}
+                        className="flex-row items-center justify-center bg-white border-2 rounded-full h-12 mb-3">
+                        <GoogleIcon
+                            primaryColor={themeColors.primary500}
+                            secondaryColor={themeColors.primary600}
+                            tertiaryColor={themeColors.primary400}
+                            quaternaryColor={themeColors.primary600}
+                        />
+                        <Text style={{ color: themeColors.primary600 }} className="font-bold text-base ml-2">Continue with Google</Text>
+                    </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={{ borderColor: themeColors.primary600 }}
-                                    className="flex-row items-center justify-center bg-white border-2 rounded-full h-12">
-                                    <FacebookIcon />
-                                    <Text style={{ color: themeColors.primary600 }} className="font-bold text-base ml-2">Continue with Facebook</Text>
-                                </TouchableOpacity>
-                            </>
-                        )
-                    }
+                    <TouchableOpacity
+                        style={{ borderColor: themeColors.primary600 }}
+                        className="flex-row items-center justify-center bg-white border-2 rounded-full h-12">
+                        <FacebookIcon primaryColor={themeColors.primary500} />
+                        <Text style={{ color: themeColors.primary600 }} className="font-bold text-base ml-2">Continue with Facebook</Text>
+                    </TouchableOpacity>
                 </View>
-                {role === 'seller' ? (
-                    <View className="flex-row justify-center mt-5 ml-5">
-                        <Text className="text-gray-600 font-semibold">Don't have an account? </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-                            <Text style={{ color: themeColors.primary600 }} className="font-bold">Sign Up</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View className="flex-row justify-center mt-5 ml-5">
-                        <TouchableOpacity onPress={handleContactSupport}>
-                            <Text style={{ color: themeColors.primary600 }} className="font-bold">Contact Support for Buyer Account</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                <View className="flex-row justify-center mt-5 ml-5">
+                    <Text className="text-gray-600 font-semibold">Don't have an account? </Text>
+                    <TouchableOpacity onPress={() => navigation.navigate("SignUp", { role })}>
+                        <Text style={{ color: themeColors.primary600 }} className="font-bold">Sign Up</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
         </View>
     )
