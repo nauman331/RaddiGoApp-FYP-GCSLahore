@@ -9,13 +9,20 @@ platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
+if ['static', 'dynamic'].include?(linkage)
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
   use_frameworks! :linkage => linkage.to_sym
+elsif linkage != nil
+  Pod::UI.puts "Ignoring unsupported USE_FRAMEWORKS=#{linkage.inspect}; expected 'static' or 'dynamic'.".yellow
 end
 
 target 'raddigo' do
   config = use_native_modules!
+
+  # FirebaseCoreInternal (Swift) needs module maps when linked statically.
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreInternal', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
