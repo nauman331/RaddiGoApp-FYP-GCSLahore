@@ -43,7 +43,7 @@ const Home: React.FC = ({ navigation }: any) => {
             >
                 <Text className='text-white text-center font-bold text-lg'>
                     {isConnected
-                        ? (iscollector ? "Request Pickup" : "View Orders")
+                        ? (iscollector ? "Open Collector" : "Request Pickup")
                         : "Connecting..."}
                 </Text>
             </TouchableOpacity>

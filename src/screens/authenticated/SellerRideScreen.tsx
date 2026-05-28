@@ -71,49 +71,7 @@ const customerRideScreen = () => {
         return R * c;
     };
 
-    // Dummy nearby collectors for testing (closer locations within ~5km)
-    const getDummycollectors = (customerLat: number, customerLon: number): Nearbycollector[] => {
-        const collectors = [
-            {
-                id: 'collector-1',
-                name: 'Ahmed Hassan',
-                latitude: customerLat + 0.02, // ~2.2 km north
-                longitude: customerLon + 0.01,
-                address: '123 Main Street, Gulberg, Lahore',
-            },
-            {
-                id: 'collector-2',
-                name: 'Sara Ali',
-                latitude: customerLat - 0.015, // ~1.7 km south
-                longitude: customerLon + 0.02,
-                address: '45 Garden Town, Lahore',
-            },
-            {
-                id: 'collector-3',
-                name: 'Usman Khan',
-                latitude: customerLat + 0.01, // ~1.1 km northeast
-                longitude: customerLon - 0.015,
-                address: '78 Model Town, Lahore',
-            },
-            {
-                id: 'collector-4',
-                name: 'Fatima Raza',
-                latitude: customerLat + 0.05, // ~5.6 km north (outside zone)
-                longitude: customerLon + 0.03,
-                address: '92 DHA Phase 5, Lahore',
-            },
-        ];
-
-        // Calculate actual distances and availability based on acceptance radius
-        return collectors.map(collector => {
-            const distance = calculateDistance(customerLat, customerLon, collector.latitude, collector.longitude);
-            return {
-                ...collector,
-                distance: parseFloat(distance.toFixed(1)),
-                available: distance <= ACCEPTANCE_RADIUS_KM,
-            };
-        });
-    };
+    // Nearby collectors are provided by the backend via socket events; no local simulation
 
     // Get and update current location
     useEffect(() => {
@@ -143,17 +101,42 @@ const customerRideScreen = () => {
         locationHandler();
     }, []);
 
-    // Load nearby collectors (simulate for now)
+    // Request nearby collectors from backend whenever location becomes available
     useEffect(() => {
         if (currentLocation && rideState.status === 'idle') {
-            const collectors = getDummycollectors(currentLocation.latitude, currentLocation.longitude);
-            setNearbycollectors(collectors);
+            if (isConnected) {
+                socketService.emit('requestNearbyCollectors', {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    radiusMeters: ACCEPTANCE_RADIUS_METERS,
+                });
+            } else {
+                // Clear local list until connection is ready
+                setNearbycollectors([]);
+            }
         }
-    }, [currentLocation, rideState.status]);
+    }, [currentLocation, rideState.status, isConnected]);
     useEffect(() => {
 
         socketService.on('nearbycollectorsUpdate', (data: Nearbycollector[]) => {
             setNearbycollectors(data);
+        });
+
+        // Live collector location updates
+        socketService.on('collectorLocationUpdate', (data: { collectorId: string; latitude: number; longitude: number; orderId?: string }) => {
+            // update nearby collectors list if present
+            setNearbycollectors(prev => prev.map(c => {
+                if (c.id === data.collectorId) {
+                    const distance = currentLocation ? calculateDistance(currentLocation.latitude, currentLocation.longitude, data.latitude, data.longitude) : c.distance;
+                    return { ...c, latitude: data.latitude, longitude: data.longitude, distance: parseFloat((distance).toFixed(1)) };
+                }
+                return c;
+            }));
+
+            // If this collector is assigned to current ride, update ride collector location
+            if (rideState.collectorId === data.collectorId) {
+                dispatch(updatecollectorLocation({ latitude: data.latitude, longitude: data.longitude }));
+            }
         });
 
         socketService.on('pickupRequestAccepted', (data: any) => {
@@ -234,11 +217,12 @@ const customerRideScreen = () => {
             return;
         }
 
-        const orderId = Date.now().toString();
         const totalWeight = getTotalWeight();
 
+        // Create a temporary local order state to show pending UI immediately
+        const tempOrderId = `temp-${Date.now()}`;
         dispatch(createOrder({
-            orderId,
+            orderId: tempOrderId,
             pickupLocation: currentLocation!,
             pickupAddress: selectedcollector.address,
             approximateWeight: totalWeight,
@@ -256,28 +240,20 @@ const customerRideScreen = () => {
             textBody: `Pickup request sent to ${selectedcollector.name}`,
         });
 
-        // Simulate request acceptance after 3 seconds (for testing)
-        setTimeout(() => {
-            dispatch(setRideStatus('accepted'));
-            Toast.show({
-                type: ALERT_TYPE.SUCCESS,
-                title: 'Request Accepted!',
-                textBody: `${selectedcollector.name} accepted your pickup request.`,
+        // Send the real request to the backend so it can notify the collector
+        if (isConnected) {
+            socketService.emit('sendPickupRequest', {
+                clientTempId: tempOrderId,
+                customerId: userdata?.id,
+                customerName: userdata?.name || 'customer',
+                collectorId: selectedcollector.id,
+                items,
+                totalWeight,
+                customerLocation: currentLocation,
             });
-        }, 3000);
-
-        // TODO: Uncomment when backend is ready
-        // if (isConnected) {
-        //     socketService.emit('sendPickupRequest', {
-        //         orderId,
-        //         customerId: userdata?.id,
-        //         customerName: userdata?.name || 'customer',
-        //         collectorId: selectedcollector.id,
-        //         items,
-        //         totalWeight,
-        //         customerLocation: currentLocation,
-        //     });
-        // }
+        } else {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Offline', textBody: 'Unable to send request: not connected.' });
+        }
     };
 
     const getStatusInfo = () => {

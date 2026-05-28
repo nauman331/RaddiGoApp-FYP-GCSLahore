@@ -45,23 +45,7 @@ const collectorRideScreen = () => {
         { id: 'other', label: 'Other', icon: MapPin, color: '#ef4444' },
     ];
 
-    // Dummy customer request for testing
-    const dummyRequest: IncomingPickupRequest = {
-        orderId: 'order-' + Date.now(),
-        customerId: 'customer-456',
-        customerName: 'Ali Khan',
-        customerLatitude: 31.5304,
-        customerLongitude: 74.3687,
-        customerAddress: '456 Garden Town, Lahore',
-        distance: 2.5,
-        estimatedEarnings: 350,
-        totalWeight: '18',
-        items: [
-            { id: '1', category: 'paper', weight: '8', description: 'Newspapers and magazines' },
-            { id: '2', category: 'plastic', weight: '6', description: 'Plastic containers' },
-            { id: '3', category: 'metal', weight: '4', description: 'Aluminum cans' },
-        ],
-    };
+    // No local dummy request — pickup requests come from the backend via sockets
 
     // Get current location
     useEffect(() => {
@@ -82,6 +66,15 @@ const collectorRideScreen = () => {
                 const location = { latitude, longitude };
                 setCurrentLocation(location);
                 dispatch(updatecollectorLocation(location));
+                // emit immediate location update when obtained
+                if (isConnected && userdata?.id) {
+                    socketService.emit('collectorLocationUpdate', {
+                        collectorId: userdata.id,
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        orderId: rideState.orderId,
+                    });
+                }
             } catch (error) {
                 console.error('Location error:', error);
             } finally {
@@ -91,21 +84,27 @@ const collectorRideScreen = () => {
         locationHandler();
     }, []);
 
-    // Simulate incoming pickup request after 5 seconds (for testing)
+    // Periodically broadcast collector location while connected
     useEffect(() => {
-        if (rideState.status === 'idle') {
-            const timer = setTimeout(() => {
-                setIncomingRequest(dummyRequest);
-                setShowRequestModal(true);
-                Toast.show({
-                    type: ALERT_TYPE.INFO,
-                    title: 'New Pickup Request!',
-                    textBody: `${dummyRequest.customerName} wants you to pickup raddi`,
-                });
-            }, 5000);
-            return () => clearTimeout(timer);
+        let interval: number | null = null;
+        if (isConnected) {
+            interval = setInterval(() => {
+                if (currentLocation && userdata?.id) {
+                    socketService.emit('collectorLocationUpdate', {
+                        collectorId: userdata.id,
+                        latitude: currentLocation.latitude,
+                        longitude: currentLocation.longitude,
+                        orderId: rideState.orderId,
+                    });
+                }
+            }, 5000) as unknown as number;
         }
-    }, [rideState.status]);
+        return () => {
+            if (interval !== null) clearInterval(interval as any);
+        };
+    }, [isConnected, currentLocation, userdata?.id, rideState.orderId]);
+
+    // No local simulations: pickup requests should arrive through socket events
 
     useEffect(() => {
         socketService.on('pickupRequestReceived', (data: any) => {
@@ -156,13 +155,13 @@ const collectorRideScreen = () => {
             textBody: `Navigating to ${incomingRequest.customerName}'s location`,
         });
 
-        // TODO: Uncomment when backend is ready
-        // if (isConnected) {
-        //     socketService.emit('acceptPickupRequest', {
-        //         orderId: incomingRequest.orderId,
-        //         collectorId: userdata?.id,
-        //     });
-        // }
+        // Emit acceptance to backend so server can notify the customer
+        if (isConnected) {
+            socketService.emit('acceptPickupRequest', {
+                orderId: incomingRequest.orderId,
+                collectorId: userdata?.id,
+            });
+        }
     };
 
     const handleRejectRequest = () => {
@@ -174,13 +173,12 @@ const collectorRideScreen = () => {
             textBody: 'You rejected the pickup request.',
         });
 
-        // TODO: Uncomment when backend is ready
-        // if (isConnected && incomingRequest) {
-        //     socketService.emit('rejectPickupRequest', {
-        //         orderId: incomingRequest.orderId,
-        //         collectorId: userdata?.id,
-        //     });
-        // }
+        if (isConnected && incomingRequest) {
+            socketService.emit('rejectPickupRequest', {
+                orderId: incomingRequest.orderId,
+                collectorId: userdata?.id,
+            });
+        }
     };
 
     const handleStartNavigation = () => {
@@ -232,13 +230,12 @@ const collectorRideScreen = () => {
             }, 2000);
         }
 
-        // TODO: Uncomment when backend is ready
-        // if (isConnected) {
-        //     socketService.emit('updatePickupStatus', {
-        //         orderId: rideState.orderId,
-        //         status: newStatus,
-        //     });
-        // }
+        if (isConnected && rideState.orderId) {
+            socketService.emit('updatePickupStatus', {
+                orderId: rideState.orderId,
+                status: newStatus,
+            });
+        }
     };
 
     const getStatusInfo = () => {
