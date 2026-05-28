@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, Tex
 import React, { useState, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../../store/store'
-import { createOrder, updatecustomerLocation, setRideStatus, resetRide, RaddiItem, addItem, removeItem } from '../../store/slices/rideSlice'
+import { createOrder, updatecustomerLocation, updatecollectorLocation, setRideStatus, resetRide, RaddiItem, addItem, removeItem } from '../../store/slices/rideSlice'
 import LiveMap from '../../components/LiveMap'
 import Header from '../../components/Header'
 import BottomSheet from '../../components/BottomSheet'
@@ -83,7 +83,7 @@ const customerRideScreen = () => {
                     Toast.show({
                         type: ALERT_TYPE.DANGER,
                         title: 'Permission Denied',
-                        textBody: 'Location permission is required.',
+                        textBody: 'Location permission is required. Open app settings to enable.',
                     });
                     return;
                 }
@@ -92,8 +92,14 @@ const customerRideScreen = () => {
                 const location = { latitude, longitude };
                 setCurrentLocation(location);
                 dispatch(updatecustomerLocation(location));
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Location error:', error);
+                // provide actionable guidance to the user
+                Toast.show({
+                    type: ALERT_TYPE.DANGER,
+                    title: 'Location Error',
+                    textBody: 'Could not get device location. Ensure GPS/location services are enabled and try again.',
+                });
             } finally {
                 setLocating(false);
             }
@@ -122,38 +128,45 @@ const customerRideScreen = () => {
             setNearbycollectors(data);
         });
 
-        // Live collector location updates
-        socketService.on('collectorLocationUpdate', (data: { collectorId: string; latitude: number; longitude: number; orderId?: string }) => {
+        // When server notifies that order was created (response to makeRaddiOrder)
+        socketService.on('orderCreated', (data: any) => {
+            if (data.success) {
+                Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Sent', textBody: `Request sent to ${data.driverCount} drivers` });
+            } else {
+                Toast.show({ type: ALERT_TYPE.WARNING, title: 'No Drivers', textBody: data.message || 'No nearby drivers found' });
+                dispatch(resetRide());
+            }
+        });
+
+        // When server notifies a specific driver accepted the ride for this customer
+        socketService.on('rideOrderAccepted', (data: any) => {
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Accepted!', textBody: `${data.collectorName || 'Collector'} accepted your pickup request.` });
+            dispatch(setRideStatus('accepted'));
+            // update collector info if provided
+            if (data.collectorId) {
+                dispatch(updatecollectorLocation({ latitude: data.orderDetails?.collectorLatitude || 0, longitude: data.orderDetails?.collectorLongitude || 0 }));
+            }
+        });
+
+        // Live driver location updates from backend
+        socketService.on('driverLocationUpdate', (data: { driverId: string; latitude: number; longitude: number; orderId?: string }) => {
             // update nearby collectors list if present
             setNearbycollectors(prev => prev.map(c => {
-                if (c.id === data.collectorId) {
+                if (c.id === String(data.driverId)) {
                     const distance = currentLocation ? calculateDistance(currentLocation.latitude, currentLocation.longitude, data.latitude, data.longitude) : c.distance;
                     return { ...c, latitude: data.latitude, longitude: data.longitude, distance: parseFloat((distance).toFixed(1)) };
                 }
                 return c;
             }));
 
-            // If this collector is assigned to current ride, update ride collector location
-            if (rideState.collectorId === data.collectorId) {
+            // If this driver is assigned to current ride, update ride collector location
+            if (rideState.collectorId === String(data.driverId)) {
                 dispatch(updatecollectorLocation({ latitude: data.latitude, longitude: data.longitude }));
             }
         });
 
-        socketService.on('pickupRequestAccepted', (data: any) => {
-            Toast.show({
-                type: ALERT_TYPE.SUCCESS,
-                title: 'Request Accepted!',
-                textBody: `${data.collectorName} accepted your pickup request.`,
-            });
-            dispatch(setRideStatus('accepted'));
-        });
-
         socketService.on('pickupRequestRejected', (data: any) => {
-            Toast.show({
-                type: ALERT_TYPE.WARNING,
-                title: 'Request Rejected',
-                textBody: `${data.collectorName} rejected your pickup request.`,
-            });
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Request Rejected', textBody: `${data.collectorName} rejected your pickup request.` });
             dispatch(resetRide());
         });
 
@@ -206,8 +219,6 @@ const customerRideScreen = () => {
     };
 
     const handleSendPickupRequest = () => {
-        if (!selectedcollector) return;
-
         if (items.length === 0) {
             Toast.show({
                 type: ALERT_TYPE.DANGER,
@@ -223,10 +234,10 @@ const customerRideScreen = () => {
         const tempOrderId = `temp-${Date.now()}`;
         dispatch(createOrder({
             orderId: tempOrderId,
-            pickupLocation: currentLocation!,
-            pickupAddress: selectedcollector.address,
+            pickupLocation: currentLocation ?? null as any,
+            pickupAddress: selectedcollector?.address || '',
             approximateWeight: totalWeight,
-            collectorId: selectedcollector.id,
+            collectorId: selectedcollector?.id ?? null as any,
             items,
         }));
 
@@ -237,20 +248,24 @@ const customerRideScreen = () => {
         Toast.show({
             type: ALERT_TYPE.INFO,
             title: 'Request Sent',
-            textBody: `Pickup request sent to ${selectedcollector.name}`,
+            textBody: selectedcollector ? `Pickup request sent to ${selectedcollector.name}` : 'Pickup request sent',
         });
 
         // Send the real request to the backend so it can notify the collector
         if (isConnected) {
-            socketService.emit('sendPickupRequest', {
-                clientTempId: tempOrderId,
-                customerId: userdata?.id,
+            const payload: any = {
+                customerId: Number(userdata?.id) || userdata?.id,
                 customerName: userdata?.name || 'customer',
-                collectorId: selectedcollector.id,
+                pickupLatitude: currentLocation?.latitude,
+                pickupLongitude: currentLocation?.longitude,
+                pickupAddress: selectedcollector?.address || '',
+                approximateRaddiInKg: totalWeight,
                 items,
-                totalWeight,
-                customerLocation: currentLocation,
-            });
+            };
+            // If a specific collector was selected, include collectorId so server can target them
+            if (selectedcollector?.id) payload.collectorId = selectedcollector.id;
+
+            socketService.emit('makeRaddiOrder', payload);
         } else {
             Toast.show({ type: ALERT_TYPE.WARNING, title: 'Offline', textBody: 'Unable to send request: not connected.' });
         }
@@ -464,6 +479,16 @@ const customerRideScreen = () => {
                     </ScrollView>
                 </View>
             </BottomSheet>
+
+            {/* Floating button to open Pickup Request form (broadcast if no collector selected) */}
+            <TouchableOpacity
+                activeOpacity={0.9}
+                className="absolute bottom-28 right-6 flex-row items-center bg-emerald-600 border border-white px-6 py-4 rounded-full shadow-lg z-50"
+                onPress={() => bottomSheetRef.current?.present?.()}
+            >
+                <Send color="#fff" size={20} strokeWidth={2} />
+                <Text className="ml-2 text-white font-bold">Request Pickup</Text>
+            </TouchableOpacity>
 
             {/* Category Selection Modal */}
             <Modal

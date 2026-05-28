@@ -68,8 +68,8 @@ const collectorRideScreen = () => {
                 dispatch(updatecollectorLocation(location));
                 // emit immediate location update when obtained
                 if (isConnected && userdata?.id) {
-                    socketService.emit('collectorLocationUpdate', {
-                        collectorId: userdata.id,
+                    socketService.emit('driverLocationUpdate', {
+                        driverId: Number(userdata.id) || userdata.id,
                         latitude: location.latitude,
                         longitude: location.longitude,
                         orderId: rideState.orderId,
@@ -90,8 +90,8 @@ const collectorRideScreen = () => {
         if (isConnected) {
             interval = setInterval(() => {
                 if (currentLocation && userdata?.id) {
-                    socketService.emit('collectorLocationUpdate', {
-                        collectorId: userdata.id,
+                    socketService.emit('driverLocationUpdate', {
+                        driverId: Number(userdata.id) || userdata.id,
                         latitude: currentLocation.latitude,
                         longitude: currentLocation.longitude,
                         orderId: rideState.orderId,
@@ -107,7 +107,8 @@ const collectorRideScreen = () => {
     // No local simulations: pickup requests should arrive through socket events
 
     useEffect(() => {
-        socketService.on('pickupRequestReceived', (data: any) => {
+        // server sends 'newRideOrder' to drivers when a nearby customer places an order
+        socketService.on('newRideOrder', (data: any) => {
             setIncomingRequest(data);
             setShowRequestModal(true);
             Toast.show({
@@ -128,7 +129,7 @@ const collectorRideScreen = () => {
         });
 
         return () => {
-            socketService.off('pickupRequestReceived');
+            socketService.off('newRideOrder');
             socketService.off('requestCancelled');
         };
     }, []);
@@ -157,9 +158,14 @@ const collectorRideScreen = () => {
 
         // Emit acceptance to backend so server can notify the customer
         if (isConnected) {
-            socketService.emit('acceptPickupRequest', {
-                orderId: incomingRequest.orderId,
-                collectorId: userdata?.id,
+            socketService.emit('acceptRaddiOrder', {
+                customerId: incomingRequest.customerId,
+                collectorId: Number(userdata?.id) || userdata?.id,
+                pickupLatitude: incomingRequest.customerLatitude,
+                pickupLongitude: incomingRequest.customerLongitude,
+                pickupAddress: incomingRequest.customerAddress,
+                scheduleTime: new Date().toISOString(),
+                approximateRaddiInKg: incomingRequest.totalWeight,
             });
         }
     };
@@ -174,9 +180,10 @@ const collectorRideScreen = () => {
         });
 
         if (isConnected && incomingRequest) {
-            socketService.emit('rejectPickupRequest', {
+            socketService.emit('rejectRaddiOrder', {
+                customerId: incomingRequest.customerId,
+                collectorId: Number(userdata?.id) || userdata?.id,
                 orderId: incomingRequest.orderId,
-                collectorId: userdata?.id,
             });
         }
     };

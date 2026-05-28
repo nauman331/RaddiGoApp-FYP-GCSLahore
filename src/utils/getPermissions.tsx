@@ -64,43 +64,87 @@ export const notificationListener = () => {
 };
 
 export const getLocationPermission = async () => {
-    return new Promise((resolve, reject) => {
-        Geolocation.getCurrentPosition(
-            (info) => {
-                console.log("Location found:", info);
-                // Permission works and we have location
-                resolve(true);
-            },
-            (error) => {
-                console.error('Error requesting location:', error);
-                // Permission denied or GPS off
-                resolve(false);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 10000
+    try {
+        if (Platform.OS === 'android') {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                {
+                    title: 'Location Permission',
+                    message: 'This app needs access to your location to provide live tracking.',
+                    buttonNeutral: 'Ask Me Later',
+                    buttonNegative: 'Cancel',
+                    buttonPositive: 'OK',
+                }
+            );
+            return granted === PermissionsAndroid.RESULTS.GRANTED;
+        } else {
+            // iOS: request authorization if available
+            try {
+                const auth = (Geolocation as any).requestAuthorization?.();
+                if (auth) {
+                    return auth === 'granted' || auth === 'always' || auth === 'whenInUse';
+                }
+            } catch (e) {
+                // fallthrough
             }
-        );
-    });
+            // If requestAuthorization not available, assume permission will be requested when getting location
+            return true;
+        }
+    } catch (error) {
+        console.error('Error checking location permission:', error);
+        return false;
+    }
 }
 
 export const getCurrentLocation = () => {
-    return new Promise((resolve, reject) => {
+    const tryGet = (opts: { enableHighAccuracy: boolean; timeout: number; maximumAge?: number }) => new Promise((resolve, reject) => {
         Geolocation.getCurrentPosition(
-            (position) => {
-                // Successfully got location
-                resolve(position);
-            },
-            (error) => {
-                // Failed to get location
-                reject(error);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 10000
-            }
+            (position) => resolve(position),
+            (error) => reject(error),
+            opts
         );
+    });
+
+    return tryGet({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }).catch(async (err1) => {
+        console.warn('First location attempt failed, retrying with longer timeout', err1);
+        try {
+            return await tryGet({ enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 });
+        } catch (err2) {
+            console.warn('Second location attempt failed, trying low-accuracy fallback', err2);
+            try {
+                return await tryGet({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+            } catch (err3) {
+                console.warn('Low-accuracy attempt failed, trying watchPosition as last resort', err3);
+                 return new Promise((resolve, reject) => {
+                    let didRespond = false;
+                    const watchId = Geolocation.watchPosition(
+                        (pos) => {
+                            if (!didRespond) {
+                                didRespond = true;
+                                Geolocation.clearWatch(watchId);
+                                resolve(pos);
+                            }
+                        },
+                        (err) => {
+                            if (!didRespond) {
+                                didRespond = true;
+                                Geolocation.clearWatch(watchId);
+                                reject(err);
+                            }
+                        },
+                        { enableHighAccuracy: false, distanceFilter: 0, interval: 5000, fastestInterval: 2000 }
+                    );
+
+                    // safety timeout
+                    setTimeout(() => {
+                        if (!didRespond) {
+                            didRespond = true;
+                            Geolocation.clearWatch(watchId);
+                            reject({ code: 3, message: 'Location request timed out (watch fallback).' });
+                        }
+                    }, 20000);
+                });
+            }
+        }
     });
 };
