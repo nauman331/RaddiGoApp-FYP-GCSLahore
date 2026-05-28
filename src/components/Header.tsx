@@ -4,6 +4,7 @@ import { Bell } from "lucide-react-native"
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
 import profileimg from "../assets/profile.png"
+import { useNavigation } from '@react-navigation/native'
 
 const Header: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { username?: string, role?: string } };
@@ -15,11 +16,14 @@ const Header: React.FC = () => {
         primaryLight: role === 'collector' ? '#fbbf24' : '#34d399',
     };
 
+    const navigation = useNavigation<any>();
+
     return (
         <View className='w-full bg-transparent py-4 px-4 flex-row items-center justify-between'>
             <View className='flex-row items-center'>
                 <Image
-                    source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg}
+                    // source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg}
+                    source={profileimg}
                     alt="Profile Picture"
                     className='w-12 h-12 rounded-full border-2 border-gray-300'
                 />
@@ -29,7 +33,7 @@ const Header: React.FC = () => {
                 </View>
             </View>
             <TouchableOpacity
-                onPress={() => console.log("Notifications")}
+                onPress={() => navigation.navigate('Notifications')}
                 style={{
                     backgroundColor: '#f3f4f6',
                     borderWidth: 2,
@@ -50,7 +54,7 @@ const Header: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}>
-                    <Text className='text-white text-xs font-bold'>3</Text>
+                    <Text className='text-white text-xs font-bold'>0</Text>
                 </View>
             </TouchableOpacity>
         </View>

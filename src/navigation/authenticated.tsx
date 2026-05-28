@@ -5,9 +5,10 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import Home from "../screens/authenticated/Home";
 import Profile from "../screens/authenticated/Profile";
+import Activity from "../screens/authenticated/Activity";
 import collectorRideScreen from "../screens/authenticated/BuyerRideScreen";
 import customerRideScreen from "../screens/authenticated/SellerRideScreen";
-import { Home as HomeIcon, User, MapPin, Activity } from "lucide-react-native";
+import { Home as HomeIcon, User, MapPin, Activity as ActivityIcon } from "lucide-react-native";
 
 const Tab = createBottomTabNavigator();
 
@@ -50,7 +51,7 @@ export default function AuthenticatedStack() {
                     if (route.name === 'Home') {
                         IconComponent = HomeIcon;
                     } else if (route.name === 'Activity') {
-                        IconComponent = Activity;
+                        IconComponent = ActivityIcon;
                     } else if (route.name === 'Ride') {
                         IconComponent = MapPin;
                     } else if (route.name === 'Profile') {
@@ -91,7 +92,7 @@ export default function AuthenticatedStack() {
             />
             <Tab.Screen
                 name="Activity"
-                component={Home}
+                component={Activity}
                 options={{
                     tabBarLabel: 'Activity',
                 }}
