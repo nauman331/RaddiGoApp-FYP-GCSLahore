@@ -8,12 +8,9 @@ import { RootState } from '../../store/store'
 const Home: React.FC = ({ navigation }: any) => {
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
-    const role = userdata?.role || 'seller'; // Default to seller if role not set
+    const role = userdata?.role || 'seller'; 
 
-    // Role-based theme colors
     const isBuyer = role === 'buyer';
-    const primaryColor = isBuyer ? 'amber' : 'emerald';
-    const secondaryColor = isBuyer ? 'emerald' : 'amber';
     const primaryColorHex = isBuyer ? '#d97706' : '#059669';
 
 

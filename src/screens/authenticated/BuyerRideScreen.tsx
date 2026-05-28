@@ -107,34 +107,31 @@ const BuyerRideScreen = () => {
         }
     }, [rideState.status]);
 
-    // Socket listeners - Backend will handle these events
     useEffect(() => {
-        // TODO: Uncomment when backend WebSocket events are ready
+        socketService.on('pickupRequestReceived', (data: any) => {
+            setIncomingRequest(data);
+            setShowRequestModal(true);
+            Toast.show({
+                type: ALERT_TYPE.INFO,
+                title: 'New Pickup Request!',
+                textBody: `${data.sellerName} wants you to pickup raddi`,
+            });
+        });
 
-        // socketService.on('pickupRequestReceived', (data: any) => {
-        //     setIncomingRequest(data);
-        //     setShowRequestModal(true);
-        //     Toast.show({
-        //         type: ALERT_TYPE.INFO,
-        //         title: 'New Pickup Request!',
-        //         textBody: `${data.sellerName} wants you to pickup raddi`,
-        //     });
-        // });
+        socketService.on('requestCancelled', () => {
+            setShowRequestModal(false);
+            setIncomingRequest(null);
+            Toast.show({
+                type: ALERT_TYPE.WARNING,
+                title: 'Request Cancelled',
+                textBody: 'The seller cancelled the pickup request.',
+            });
+        });
 
-        // socketService.on('requestCancelled', () => {
-        //     setShowRequestModal(false);
-        //     setIncomingRequest(null);
-        //     Toast.show({
-        //         type: ALERT_TYPE.WARNING,
-        //         title: 'Request Cancelled',
-        //         textBody: 'The seller cancelled the pickup request.',
-        //     });
-        // });
-
-        // return () => {
-        //     socketService.off('pickupRequestReceived');
-        //     socketService.off('requestCancelled');
-        // };
+        return () => {
+            socketService.off('pickupRequestReceived');
+            socketService.off('requestCancelled');
+        };
     }, []);
 
     const handleAcceptRequest = () => {

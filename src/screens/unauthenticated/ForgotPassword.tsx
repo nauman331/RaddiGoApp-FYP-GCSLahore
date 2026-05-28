@@ -9,15 +9,15 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
     const role = route?.params?.role || 'seller';
 
     const { mutateAsync: sendOTP, isPending: isSendingOTP } = useSubmit({
-        endpoint: 'resend-verification-email',
+        endpoint: 'auth/api/v1/resend-verification-email',
     });
 
     const { mutateAsync: verifyOTP, isPending: isVerifyingOTP } = useSubmit({
-        endpoint: 'verify-email',
+        endpoint: 'auth/api/v1/verify-email',
     });
 
     const { mutateAsync: resetPassword, isPending: isResettingPassword } = useSubmit({
-        endpoint: 'reset-password',
+        endpoint: 'auth/api/v1/reset-password',
     });
 
     const [step, setStep] = useState<number>(1);

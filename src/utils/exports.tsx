@@ -1,2 +1,2 @@
-export const apiURL = "http://142.93.211.93:3001/api/v1/";
-export const socketURL = "http://142.93.211.93:3001/socket";
+export const apiURL = "http://100.52.191.87/";
+export const socketURL = "ws://100.52.191.87/order/ws";

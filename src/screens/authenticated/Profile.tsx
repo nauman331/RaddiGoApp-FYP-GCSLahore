@@ -1,5 +1,5 @@
-import { View, Text, Image, ScrollView, TouchableOpacity, Alert } from 'react-native'
-import React, { useEffect } from 'react'
+import { View, Text, Image, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect } from 'react'
 import Header from '../../components/Header'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
@@ -7,16 +7,26 @@ import { logout } from '../../store/slices/authSlice'
 import { resetRide } from '../../store/slices/rideSlice'
 import { User } from '../../types/map'
 import profileimg from "../../assets/profile.png"
+import { useSubmit } from "../../apiHooks/useSubmit"
+import { ALERT_TYPE, Toast } from 'react-native-alert-notification';
 
 const Profile = () => {
     const dispatch = useDispatch();
     const userdata = useSelector((state: RootState) => state.auth.userdata) as User | null;
-    const role = userdata?.role || 'seller'; // Default to seller if role not set
+    const role = userdata?.role || 'seller';
 
-    // Role-based theme colors
     const isBuyer = role === 'buyer';
-    const primaryColor = isBuyer ? 'amber' : 'emerald';
     const primaryColorHex = isBuyer ? '#d97706' : '#059669';
+
+    // State for managing the delete confirmation modal
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+
+    // Setup the useSubmit hook for the delete endpoint
+    const { mutateAsync: deleteAccountMutate, isPending: isDeleting } = useSubmit({
+        method: 'DELETE',
+        endpoint: 'auth/api/v1/me/delete',
+        isAuth: true, // Crucial: passes the Bearer token to the backend
+    });
 
     useEffect(() => {
     }, []);
@@ -24,6 +34,31 @@ const Profile = () => {
     const handleLogout = () => {
         dispatch(logout());
         dispatch(resetRide());
+    }
+
+    const handleDeleteAccount = async () => {
+        try {
+            // Trigger the delete API call
+            await deleteAccountMutate({});
+            
+            Toast.show({
+                type: ALERT_TYPE.SUCCESS,
+                title: 'Deleted',
+                textBody: 'Your account has been permanently deleted.',
+            });
+            
+            setIsDeleteModalVisible(false);
+            
+            // Clear local Redux state and log the user out
+            dispatch(logout());
+            dispatch(resetRide());
+        } catch (error: any) {
+            Toast.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: error.message || 'Failed to delete account',
+            });
+        }
     }
 
     return (
@@ -73,12 +108,59 @@ const Profile = () => {
                             className='bg-white border-2 border-red-600 p-4 rounded-full justify-center items-center'>
                             <Text className='text-red-600 font-bold text-base'>Logout</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity className='bg-red-100 border-2 border-red-800 p-4 rounded-full justify-center items-center'>
+                        
+                        {/* Open Delete Modal Button */}
+                        <TouchableOpacity 
+                            onPress={() => setIsDeleteModalVisible(true)}
+                            className='bg-red-100 border-2 border-red-800 p-4 rounded-full justify-center items-center'>
                             <Text className='text-red-800 font-bold text-base'>Delete Account</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={isDeleteModalVisible}
+                onRequestClose={() => {
+                    if (!isDeleting) setIsDeleteModalVisible(false);
+                }}
+            >
+                <View className="flex-1 justify-center items-center bg-black/50 px-4">
+                    <View className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+                        <Text className="text-xl font-bold text-gray-900 mb-2">Delete Account?</Text>
+                        <Text className="text-gray-600 mb-6">
+                            Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.
+                        </Text>
+                        
+                        <View className="flex-row gap-3">
+                            {/* Cancel Button */}
+                            <TouchableOpacity 
+                                onPress={() => setIsDeleteModalVisible(false)}
+                                disabled={isDeleting}
+                                className="flex-1 bg-gray-200 py-3 rounded-xl items-center justify-center"
+                            >
+                                <Text className="font-bold text-gray-700">Cancel</Text>
+                            </TouchableOpacity>
+
+                            {/* Confirm Delete Button */}
+                            <TouchableOpacity 
+                                onPress={handleDeleteAccount}
+                                disabled={isDeleting}
+                                className="flex-1 bg-red-600 py-3 rounded-xl items-center justify-center flex-row"
+                            >
+                                {isDeleting ? (
+                                    <ActivityIndicator size="small" color="#ffffff" />
+                                ) : (
+                                    <Text className="font-bold text-white">Delete</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     )
 }

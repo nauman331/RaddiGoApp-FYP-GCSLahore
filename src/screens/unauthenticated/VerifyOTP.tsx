@@ -9,11 +9,11 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
     const { email, role } = route.params;
 
     const { mutateAsync: verifyOTP, isPending: isVerifying } = useSubmit({
-        endpoint: 'verify-email',
+        endpoint: 'auth/api/v1/verify-email',
     });
 
     const { mutateAsync: resendOTP, isPending: isResending } = useSubmit({
-        endpoint: 'resend-verification-email',
+        endpoint: 'auth/api/v1/resend-verification-email',
     });
 
     const [otp, setOtp] = useState<string>('');

@@ -150,38 +150,35 @@ const SellerRideScreen = () => {
             setNearbyBuyers(buyers);
         }
     }, [currentLocation, rideState.status]);
-
-    // Socket listeners - Backend will handle these events
     useEffect(() => {
-        // TODO: Uncomment when backend WebSocket events are ready
 
-        // socketService.on('nearbyBuyersUpdate', (data: NearbyBuyer[]) => {
-        //     setNearbyBuyers(data);
-        // });
+        socketService.on('nearbyBuyersUpdate', (data: NearbyBuyer[]) => {
+            setNearbyBuyers(data);
+        });
 
-        // socketService.on('pickupRequestAccepted', (data: any) => {
-        //     Toast.show({
-        //         type: ALERT_TYPE.SUCCESS,
-        //         title: 'Request Accepted!',
-        //         textBody: `${data.buyerName} accepted your pickup request.`,
-        //     });
-        //     dispatch(setRideStatus('accepted'));
-        // });
+        socketService.on('pickupRequestAccepted', (data: any) => {
+            Toast.show({
+                type: ALERT_TYPE.SUCCESS,
+                title: 'Request Accepted!',
+                textBody: `${data.buyerName} accepted your pickup request.`,
+            });
+            dispatch(setRideStatus('accepted'));
+        });
 
-        // socketService.on('pickupRequestRejected', (data: any) => {
-        //     Toast.show({
-        //         type: ALERT_TYPE.WARNING,
-        //         title: 'Request Rejected',
-        //         textBody: `${data.buyerName} rejected your pickup request.`,
-        //     });
-        //     dispatch(resetRide());
-        // });
+        socketService.on('pickupRequestRejected', (data: any) => {
+            Toast.show({
+                type: ALERT_TYPE.WARNING,
+                title: 'Request Rejected',
+                textBody: `${data.buyerName} rejected your pickup request.`,
+            });
+            dispatch(resetRide());
+        });
 
-        // return () => {
-        //     socketService.off('nearbyBuyersUpdate');
-        //     socketService.off('pickupRequestAccepted');
-        //     socketService.off('pickupRequestRejected');
-        // };
+        return () => {
+            socketService.off('nearbyBuyersUpdate');
+            socketService.off('pickupRequestAccepted');
+            socketService.off('pickupRequestRejected');
+        };
     }, []);
 
     const handleSelectBuyer = (buyer: NearbyBuyer) => {

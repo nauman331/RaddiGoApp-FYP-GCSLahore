@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
   const getUser = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${apiURL}me`, {
+      const response = await fetch(`${apiURL}auth/api/v1/me`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

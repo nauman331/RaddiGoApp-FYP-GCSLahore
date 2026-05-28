@@ -13,7 +13,7 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
     const role = route?.params?.role || 'seller';
     const dispatch = useDispatch();
     const { mutateAsync, isPending } = useSubmit({
-        endpoint: 'login',
+        endpoint: 'auth/api/v1/login',
     });
 
     const [email, setEmail] = useState<string>('')
