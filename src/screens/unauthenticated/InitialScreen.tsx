@@ -4,9 +4,9 @@ import { DollarSign, Package, Zap, Home, Recycle, Truck } from 'lucide-react-nat
 import Logo from "../../assets/half-logo.jpeg"
 
 const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-    const [role, setRole] = useState<'seller' | 'buyer'>('seller')
+    const [role, setRole] = useState<'customer' | 'collector'>('customer')
 
-    const features = role === 'seller'
+    const features = role === 'customer'
         ? [
             { icon: DollarSign, text: 'Instant Earnings', color: '#059669' },
             { icon: Package, text: 'Easy Listing', color: '#059669' },
@@ -18,10 +18,10 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             { icon: Zap, text: 'Quick & Easy', color: '#d97706' }
         ]
 
-    const headerTitle = role === 'seller'
+    const headerTitle = role === 'customer'
         ? 'Sell Your Raddi Without Leaving Home'
         : "Get Pickup Service For Your Raddi"
-    const headerSubtitle = role === 'seller'
+    const headerSubtitle = role === 'customer'
         ? 'Our riders pick up raddi from customers — list items and earn.'
         : 'Request a rider to pick up your items — quick and contactless.'
 
@@ -41,7 +41,7 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
                 {/* Hero Section */}
                 <View className="items-center justify-center">
-                    <View className={`w-full items-center rounded-3xl p-6 shadow-sm ${role === 'seller' ? 'bg-emerald-50/80' : 'bg-amber-50/80'
+                    <View className={`w-full items-center rounded-3xl p-6 shadow-sm ${role === 'customer' ? 'bg-emerald-50/80' : 'bg-amber-50/80'
                         }`}>
 
                         <View className="mt-8 px-2 flex items-center">
@@ -58,7 +58,7 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 return (
                                     <View
                                         key={`${index} - ${feature.text}`}
-                                        className={`px-4 py-2 rounded-full flex-row items-center gap-1.5 ${role === 'seller' ? 'bg-emerald-200/60' : 'bg-amber-200/60'}`}
+                                        className={`px-4 py-2 rounded-full flex-row items-center gap-1.5 ${role === 'customer' ? 'bg-emerald-200/60' : 'bg-amber-200/60'}`}
                                     >
                                         <IconComponent size={14} color={feature.color} strokeWidth={2.5} />
                                         <Text className="text-xs font-semibold text-gray-700">{feature.text}</Text>
@@ -79,52 +79,52 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                     {/* Role Toggle */}
                     <View className="flex-row gap-3 mb-6">
                         <TouchableOpacity
-                            onPress={() => setRole('seller')}
+                            onPress={() => setRole('customer')}
                             activeOpacity={0.7}
-                            className={`flex-1 py-5 rounded-2xl items-center justify-center shadow-sm ${role === 'seller'
+                            className={`flex-1 py-5 rounded-2xl items-center justify-center shadow-sm ${role === 'customer'
                                 ? 'bg-emerald-600 shadow-emerald-200'
                                 : 'bg-white border-2 border-emerald-100'
                                 }`}
                         >
-                            <View className={`w-12 h-12 rounded-full items-center justify-center mb-2 ${role === 'seller' ? 'bg-emerald-500' : 'bg-emerald-50'
+                            <View className={`w-12 h-12 rounded-full items-center justify-center mb-2 ${role === 'customer' ? 'bg-emerald-500' : 'bg-emerald-50'
                                 }`}>
                                 <Home
                                     size={24}
-                                    color={role === 'seller' ? '#ffffff' : '#059669'}
+                                    color={role === 'customer' ? '#ffffff' : '#059669'}
                                     strokeWidth={2}
                                 />
                             </View>
-                            <Text className={`font-bold text-base ${role === 'seller' ? 'text-white' : 'text-emerald-700'
+                            <Text className={`font-bold text-base ${role === 'customer' ? 'text-white' : 'text-emerald-700'
                                 }`}>
-                                Seller
+                                customer
                             </Text>
-                            <Text className={`text-xs mt-1 ${role === 'seller' ? 'text-emerald-50' : 'text-emerald-600'
+                            <Text className={`text-xs mt-1 ${role === 'customer' ? 'text-emerald-50' : 'text-emerald-600'
                                 }`}>
                                 Pickup orders
                             </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={() => setRole('buyer')}
+                            onPress={() => setRole('collector')}
                             activeOpacity={0.7}
-                            className={`flex-1 py-5 rounded-2xl items-center justify-center shadow-sm ${role === 'buyer'
+                            className={`flex-1 py-5 rounded-2xl items-center justify-center shadow-sm ${role === 'collector'
                                 ? 'bg-amber-600 shadow-amber-200'
                                 : 'bg-white border-2 border-amber-100'
                                 }`}
                         >
-                            <View className={`w-12 h-12 rounded-full items-center justify-center mb-2 ${role === 'buyer' ? 'bg-amber-500' : 'bg-amber-50'
+                            <View className={`w-12 h-12 rounded-full items-center justify-center mb-2 ${role === 'collector' ? 'bg-amber-500' : 'bg-amber-50'
                                 }`}>
                                 <Truck
                                     size={24}
-                                    color={role === 'buyer' ? '#ffffff' : '#d97706'}
+                                    color={role === 'collector' ? '#ffffff' : '#d97706'}
                                     strokeWidth={2}
                                 />
                             </View>
-                            <Text className={`font-bold text-base ${role === 'buyer' ? 'text-white' : 'text-amber-700'
+                            <Text className={`font-bold text-base ${role === 'collector' ? 'text-white' : 'text-amber-700'
                                 }`}>
-                                Buyer
+                                collector
                             </Text>
-                            <Text className={`text-xs mt-1 ${role === 'buyer' ? 'text-amber-50' : 'text-amber-600'
+                            <Text className={`text-xs mt-1 ${role === 'collector' ? 'text-amber-50' : 'text-amber-600'
                                 }`}>
                                 Request pickup
                             </Text>
@@ -135,13 +135,13 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                     <TouchableOpacity
                         onPress={() => navigation.navigate('SignIn', { role })}
                         activeOpacity={0.8}
-                        className={`py-5 rounded-2xl items-center justify-center shadow-lg ${role === 'seller'
+                        className={`py-5 rounded-2xl items-center justify-center shadow-lg ${role === 'customer'
                             ? 'bg-emerald-600 shadow-emerald-200'
                             : 'bg-amber-600 shadow-amber-200'
                             }`}
                     >
                         <Text className="text-white font-bold text-lg">
-                            Continue as {role === 'seller' ? 'Seller' : 'Buyer'}
+                            Continue as {role === 'customer' ? 'customer' : 'collector'}
                         </Text>
                     </TouchableOpacity>
                 </View>

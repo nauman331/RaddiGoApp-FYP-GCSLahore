@@ -8,10 +8,10 @@ import LOGO_URI from '../assets/logo.png';
 const Loading: React.FC = () => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { role?: string } };
-    const role = userdata?.role || 'seller';
+    const role = userdata?.role || 'customer';
 
     const themeColors = {
-        primary: role === 'buyer' ? '#d97706' : '#059669',
+        primary: role === 'collector' ? '#d97706' : '#059669',
     };
 
     useEffect(() => {

@@ -22,8 +22,8 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
 
     // Role-based theme colors
     const themeColors = {
-        primary600: role === 'seller' ? '#059669' : '#d97706',
-        primary500: role === 'seller' ? '#10b981' : '#f59e0b',
+        primary600: role === 'customer' ? '#059669' : '#d97706',
+        primary500: role === 'customer' ? '#10b981' : '#f59e0b',
     };
 
     useEffect(() => {

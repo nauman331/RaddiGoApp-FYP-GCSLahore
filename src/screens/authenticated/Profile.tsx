@@ -13,19 +13,17 @@ import { ALERT_TYPE, Toast } from 'react-native-alert-notification';
 const Profile = () => {
     const dispatch = useDispatch();
     const userdata = useSelector((state: RootState) => state.auth.userdata) as User | null;
-    const role = userdata?.role || 'seller';
+    const role = userdata?.role || 'customer';
 
-    const isBuyer = role === 'buyer';
-    const primaryColorHex = isBuyer ? '#d97706' : '#059669';
+    const iscollector = role === 'collector';
+    const primaryColorHex = iscollector ? '#d97706' : '#059669';
 
-    // State for managing the delete confirmation modal
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
-    // Setup the useSubmit hook for the delete endpoint
     const { mutateAsync: deleteAccountMutate, isPending: isDeleting } = useSubmit({
         method: 'DELETE',
         endpoint: 'auth/api/v1/me/delete',
-        isAuth: true, // Crucial: passes the Bearer token to the backend
+        isAuth: true, 
     });
 
     useEffect(() => {
@@ -38,7 +36,6 @@ const Profile = () => {
 
     const handleDeleteAccount = async () => {
         try {
-            // Trigger the delete API call
             await deleteAccountMutate({});
             
             Toast.show({
@@ -49,7 +46,6 @@ const Profile = () => {
             
             setIsDeleteModalVisible(false);
             
-            // Clear local Redux state and log the user out
             dispatch(logout());
             dispatch(resetRide());
         } catch (error: any) {

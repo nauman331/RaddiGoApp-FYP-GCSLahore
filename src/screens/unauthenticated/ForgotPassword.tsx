@@ -6,7 +6,7 @@ import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
 const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
-    const role = route?.params?.role || 'seller';
+    const role = route?.params?.role || 'customer';
 
     const { mutateAsync: sendOTP, isPending: isSendingOTP } = useSubmit({
         endpoint: 'auth/api/v1/resend-verification-email',
@@ -32,8 +32,8 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
 
     // Role-based theme colors
     const themeColors = {
-        primary600: role === 'seller' ? '#059669' : '#d97706',
-        primary500: role === 'seller' ? '#10b981' : '#f59e0b',
+        primary600: role === 'customer' ? '#059669' : '#d97706',
+        primary500: role === 'customer' ? '#10b981' : '#f59e0b',
     };
 
     useEffect(() => {

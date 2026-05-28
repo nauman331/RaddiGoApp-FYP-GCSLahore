@@ -10,7 +10,7 @@ import { ALERT_TYPE, Toast } from 'react-native-alert-notification';
 
 
 const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
-    const role = route?.params?.role || 'seller';
+    const role = route?.params?.role || 'customer';
     const dispatch = useDispatch();
     const { mutateAsync, isPending } = useSubmit({
         endpoint: 'auth/api/v1/login',
@@ -22,10 +22,10 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
     // Dynamic theme colors based on role
     const themeColors = {
-        primary600: role === 'seller' ? '#059669' : '#d97706',
-        primary500: role === 'seller' ? '#10b981' : '#f59e0b',
-        primary400: role === 'seller' ? '#34d399' : '#fbbf24',
-        primary300: role === 'seller' ? '#6ee7b7' : '#fcd34d',
+        primary600: role === 'customer' ? '#059669' : '#d97706',
+        primary500: role === 'customer' ? '#10b981' : '#f59e0b',
+        primary400: role === 'customer' ? '#34d399' : '#fbbf24',
+        primary300: role === 'customer' ? '#6ee7b7' : '#fcd34d',
     }
 
     const handleContactSupport = () => {

@@ -5,8 +5,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import Home from "../screens/authenticated/Home";
 import Profile from "../screens/authenticated/Profile";
-import BuyerRideScreen from "../screens/authenticated/BuyerRideScreen";
-import SellerRideScreen from "../screens/authenticated/SellerRideScreen";
+import collectorRideScreen from "../screens/authenticated/BuyerRideScreen";
+import customerRideScreen from "../screens/authenticated/SellerRideScreen";
 import { Home as HomeIcon, User, MapPin, Activity } from "lucide-react-native";
 
 const Tab = createBottomTabNavigator();
@@ -14,12 +14,12 @@ const Tab = createBottomTabNavigator();
 export default function AuthenticatedStack() {
     const insets = useSafeAreaInsets();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
-    const role = userdata?.role || 'seller';
+    const role = userdata?.role || 'customer';
 
-    const RideScreen = role === 'buyer' ? BuyerRideScreen : SellerRideScreen;
-    const rideLabel = role === 'buyer' ? 'Pickups' : 'Find Buyers';
-    const primaryColor = role === 'buyer' ? '#d97706' : '#10b981';
-    const primaryColorLight = role === 'buyer' ? '#d9770615' : '#10b98115';
+    const RideScreen = role === 'collector' ? collectorRideScreen : customerRideScreen;
+    const rideLabel = role === 'collector' ? 'Pickups' : 'Find collectors';
+    const primaryColor = role === 'collector' ? '#d97706' : '#10b981';
+    const primaryColorLight = role === 'collector' ? '#d9770615' : '#10b98115';
 
     return (
         <Tab.Navigator

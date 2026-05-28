@@ -2,11 +2,11 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type RideStatus =
     | 'idle' // No active ride
-    | 'searching' // Buyer searching for seller
+    | 'searching' // collector searching for customer
     | 'pending' // Order placed, waiting for acceptance
-    | 'accepted' // Seller accepted
-    | 'on_way' // Seller on way to pickup
-    | 'arrived' // Seller arrived at pickup
+    | 'accepted' // customer accepted
+    | 'on_way' // customer on way to pickup
+    | 'arrived' // customer arrived at pickup
     | 'picked_up' // Items picked up
     | 'completed' // Ride completed
     | 'cancelled'; // Ride cancelled
@@ -30,8 +30,8 @@ export interface OrderHistory {
     pickupAddress: string;
     totalWeight: string;
     price: number | null;
-    sellerName?: string;
-    buyerName?: string;
+    customerName?: string;
+    collectorName?: string;
     items?: RaddiItem[];
 }
 
@@ -40,15 +40,15 @@ export interface RideState {
     orderId: string | null;
     pickupLocation: Location | null;
     dropoffLocation: Location | null;
-    sellerLocation: Location | null;
-    buyerLocation: Location | null;
+    customerLocation: Location | null;
+    collectorLocation: Location | null;
     pickupAddress: string;
     approximateWeight: string;
     items: RaddiItem[];
-    sellerId: string | null;
-    sellerName: string;
-    buyerId: string | null;
-    buyerName: string;
+    customerId: string | null;
+    customerName: string;
+    collectorId: string | null;
+    collectorName: string;
     estimatedTime: number | null; // in minutes
     price: number | null;
     orderHistory: OrderHistory[];
@@ -61,15 +61,15 @@ const initialState: RideState = {
     orderId: null,
     pickupLocation: null,
     dropoffLocation: null,
-    sellerLocation: null,
-    buyerLocation: null,
+    customerLocation: null,
+    collectorLocation: null,
     pickupAddress: '',
     approximateWeight: '',
     items: [],
-    sellerId: null,
-    sellerName: '',
-    buyerId: null,
-    buyerName: '',
+    customerId: null,
+    customerName: '',
+    collectorId: null,
+    collectorName: '',
     estimatedTime: null,
     price: null,
     orderHistory: [],
@@ -89,35 +89,35 @@ const rideSlice = createSlice({
             pickupLocation: Location;
             pickupAddress: string;
             approximateWeight: string;
-            buyerId: string;
+            collectorId: string;
             items?: RaddiItem[];
         }>) {
             state.status = 'pending';
             state.orderId = action.payload.orderId;
             state.pickupLocation = action.payload.pickupLocation;
-            state.buyerLocation = action.payload.pickupLocation;
+            state.collectorLocation = action.payload.pickupLocation;
             state.pickupAddress = action.payload.pickupAddress;
             state.approximateWeight = action.payload.approximateWeight;
-            state.buyerId = action.payload.buyerId;
+            state.collectorId = action.payload.collectorId;
             state.items = action.payload.items || [];
         },
         acceptOrder(state, action: PayloadAction<{
-            sellerId: string;
-            sellerName: string;
-            sellerLocation: Location;
+            customerId: string;
+            customerName: string;
+            customerLocation: Location;
             estimatedTime: number;
         }>) {
             state.status = 'accepted';
-            state.sellerId = action.payload.sellerId;
-            state.sellerName = action.payload.sellerName;
-            state.sellerLocation = action.payload.sellerLocation;
+            state.customerId = action.payload.customerId;
+            state.customerName = action.payload.customerName;
+            state.customerLocation = action.payload.customerLocation;
             state.estimatedTime = action.payload.estimatedTime;
         },
-        updateSellerLocation(state, action: PayloadAction<Location>) {
-            state.sellerLocation = action.payload;
+        updatecustomerLocation(state, action: PayloadAction<Location>) {
+            state.customerLocation = action.payload;
         },
-        updateBuyerLocation(state, action: PayloadAction<Location>) {
-            state.buyerLocation = action.payload;
+        updatecollectorLocation(state, action: PayloadAction<Location>) {
+            state.collectorLocation = action.payload;
         },
         setDropoffLocation(state, action: PayloadAction<Location>) {
             state.dropoffLocation = action.payload;
@@ -137,8 +137,8 @@ const rideSlice = createSlice({
                 pickupAddress: state.pickupAddress,
                 totalWeight: state.approximateWeight,
                 price: action.payload.price,
-                sellerName: state.sellerName,
-                buyerName: state.buyerName,
+                customerName: state.customerName,
+                collectorName: state.collectorName,
                 items: state.items,
             };
             state.orderHistory.unshift(orderRecord);
@@ -157,8 +157,8 @@ const rideSlice = createSlice({
                     pickupAddress: state.pickupAddress,
                     totalWeight: state.approximateWeight,
                     price: null,
-                    sellerName: state.sellerName,
-                    buyerName: state.buyerName,
+                    customerName: state.customerName,
+                    collectorName: state.collectorName,
                     items: state.items,
                 };
                 state.orderHistory.unshift(orderRecord);
@@ -190,8 +190,8 @@ export const {
     setRideStatus,
     createOrder,
     acceptOrder,
-    updateSellerLocation,
-    updateBuyerLocation,
+    updatecustomerLocation,
+    updatecollectorLocation,
     setDropoffLocation,
     updateRideInfo,
     completeRide,

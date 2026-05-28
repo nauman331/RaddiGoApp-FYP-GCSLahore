@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, Tex
 import React, { useState, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../../store/store'
-import { createOrder, updateSellerLocation, setRideStatus, resetRide, RaddiItem, addItem, removeItem } from '../../store/slices/rideSlice'
+import { createOrder, updatecustomerLocation, setRideStatus, resetRide, RaddiItem, addItem, removeItem } from '../../store/slices/rideSlice'
 import LiveMap from '../../components/LiveMap'
 import Header from '../../components/Header'
 import BottomSheet from '../../components/BottomSheet'
@@ -11,7 +11,7 @@ import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
 import { MapPin, Navigation, Package, User, DollarSign, TrendingUp, FileText, Smartphone, Boxes, Wine, Layers, Plus, Trash2, Send } from 'lucide-react-native'
 
-interface NearbyBuyer {
+interface Nearbycollector {
     id: string;
     name: string;
     latitude: number;
@@ -21,7 +21,7 @@ interface NearbyBuyer {
     available: boolean;
 }
 
-const SellerRideScreen = () => {
+const customerRideScreen = () => {
     const dispatch = useDispatch();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; name?: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
@@ -33,8 +33,8 @@ const SellerRideScreen = () => {
 
     const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const [locating, setLocating] = useState(false);
-    const [nearbyBuyers, setNearbyBuyers] = useState<NearbyBuyer[]>([]);
-    const [selectedBuyer, setSelectedBuyer] = useState<NearbyBuyer | null>(null);
+    const [nearbycollectors, setNearbycollectors] = useState<Nearbycollector[]>([]);
+    const [selectedcollector, setSelectedcollector] = useState<Nearbycollector | null>(null);
     const [showOrderForm, setShowOrderForm] = useState(false);
     const [items, setItems] = useState<RaddiItem[]>([]);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -71,44 +71,44 @@ const SellerRideScreen = () => {
         return R * c;
     };
 
-    // Dummy nearby buyers for testing (closer locations within ~5km)
-    const getDummyBuyers = (sellerLat: number, sellerLon: number): NearbyBuyer[] => {
-        const buyers = [
+    // Dummy nearby collectors for testing (closer locations within ~5km)
+    const getDummycollectors = (customerLat: number, customerLon: number): Nearbycollector[] => {
+        const collectors = [
             {
-                id: 'buyer-1',
+                id: 'collector-1',
                 name: 'Ahmed Hassan',
-                latitude: sellerLat + 0.02, // ~2.2 km north
-                longitude: sellerLon + 0.01,
+                latitude: customerLat + 0.02, // ~2.2 km north
+                longitude: customerLon + 0.01,
                 address: '123 Main Street, Gulberg, Lahore',
             },
             {
-                id: 'buyer-2',
+                id: 'collector-2',
                 name: 'Sara Ali',
-                latitude: sellerLat - 0.015, // ~1.7 km south
-                longitude: sellerLon + 0.02,
+                latitude: customerLat - 0.015, // ~1.7 km south
+                longitude: customerLon + 0.02,
                 address: '45 Garden Town, Lahore',
             },
             {
-                id: 'buyer-3',
+                id: 'collector-3',
                 name: 'Usman Khan',
-                latitude: sellerLat + 0.01, // ~1.1 km northeast
-                longitude: sellerLon - 0.015,
+                latitude: customerLat + 0.01, // ~1.1 km northeast
+                longitude: customerLon - 0.015,
                 address: '78 Model Town, Lahore',
             },
             {
-                id: 'buyer-4',
+                id: 'collector-4',
                 name: 'Fatima Raza',
-                latitude: sellerLat + 0.05, // ~5.6 km north (outside zone)
-                longitude: sellerLon + 0.03,
+                latitude: customerLat + 0.05, // ~5.6 km north (outside zone)
+                longitude: customerLon + 0.03,
                 address: '92 DHA Phase 5, Lahore',
             },
         ];
 
         // Calculate actual distances and availability based on acceptance radius
-        return buyers.map(buyer => {
-            const distance = calculateDistance(sellerLat, sellerLon, buyer.latitude, buyer.longitude);
+        return collectors.map(collector => {
+            const distance = calculateDistance(customerLat, customerLon, collector.latitude, collector.longitude);
             return {
-                ...buyer,
+                ...collector,
                 distance: parseFloat(distance.toFixed(1)),
                 available: distance <= ACCEPTANCE_RADIUS_KM,
             };
@@ -133,7 +133,7 @@ const SellerRideScreen = () => {
                 const { latitude, longitude } = (position as { coords: { latitude: number; longitude: number } }).coords;
                 const location = { latitude, longitude };
                 setCurrentLocation(location);
-                dispatch(updateSellerLocation(location));
+                dispatch(updatecustomerLocation(location));
             } catch (error) {
                 console.error('Location error:', error);
             } finally {
@@ -143,24 +143,24 @@ const SellerRideScreen = () => {
         locationHandler();
     }, []);
 
-    // Load nearby buyers (simulate for now)
+    // Load nearby collectors (simulate for now)
     useEffect(() => {
         if (currentLocation && rideState.status === 'idle') {
-            const buyers = getDummyBuyers(currentLocation.latitude, currentLocation.longitude);
-            setNearbyBuyers(buyers);
+            const collectors = getDummycollectors(currentLocation.latitude, currentLocation.longitude);
+            setNearbycollectors(collectors);
         }
     }, [currentLocation, rideState.status]);
     useEffect(() => {
 
-        socketService.on('nearbyBuyersUpdate', (data: NearbyBuyer[]) => {
-            setNearbyBuyers(data);
+        socketService.on('nearbycollectorsUpdate', (data: Nearbycollector[]) => {
+            setNearbycollectors(data);
         });
 
         socketService.on('pickupRequestAccepted', (data: any) => {
             Toast.show({
                 type: ALERT_TYPE.SUCCESS,
                 title: 'Request Accepted!',
-                textBody: `${data.buyerName} accepted your pickup request.`,
+                textBody: `${data.collectorName} accepted your pickup request.`,
             });
             dispatch(setRideStatus('accepted'));
         });
@@ -169,20 +169,20 @@ const SellerRideScreen = () => {
             Toast.show({
                 type: ALERT_TYPE.WARNING,
                 title: 'Request Rejected',
-                textBody: `${data.buyerName} rejected your pickup request.`,
+                textBody: `${data.collectorName} rejected your pickup request.`,
             });
             dispatch(resetRide());
         });
 
         return () => {
-            socketService.off('nearbyBuyersUpdate');
+            socketService.off('nearbycollectorsUpdate');
             socketService.off('pickupRequestAccepted');
             socketService.off('pickupRequestRejected');
         };
     }, []);
 
-    const handleSelectBuyer = (buyer: NearbyBuyer) => {
-        setSelectedBuyer(buyer);
+    const handleSelectcollector = (collector: Nearbycollector) => {
+        setSelectedcollector(collector);
         bottomSheetRef.current?.present?.();
     };
 
@@ -223,7 +223,7 @@ const SellerRideScreen = () => {
     };
 
     const handleSendPickupRequest = () => {
-        if (!selectedBuyer) return;
+        if (!selectedcollector) return;
 
         if (items.length === 0) {
             Toast.show({
@@ -240,20 +240,20 @@ const SellerRideScreen = () => {
         dispatch(createOrder({
             orderId,
             pickupLocation: currentLocation!,
-            pickupAddress: selectedBuyer.address,
+            pickupAddress: selectedcollector.address,
             approximateWeight: totalWeight,
-            buyerId: selectedBuyer.id,
+            collectorId: selectedcollector.id,
             items,
         }));
 
         bottomSheetRef.current?.close?.();
         setItems([]);
-        setSelectedBuyer(null);
+        setSelectedcollector(null);
 
         Toast.show({
             type: ALERT_TYPE.INFO,
             title: 'Request Sent',
-            textBody: `Pickup request sent to ${selectedBuyer.name}`,
+            textBody: `Pickup request sent to ${selectedcollector.name}`,
         });
 
         // Simulate request acceptance after 3 seconds (for testing)
@@ -262,7 +262,7 @@ const SellerRideScreen = () => {
             Toast.show({
                 type: ALERT_TYPE.SUCCESS,
                 title: 'Request Accepted!',
-                textBody: `${selectedBuyer.name} accepted your pickup request.`,
+                textBody: `${selectedcollector.name} accepted your pickup request.`,
             });
         }, 3000);
 
@@ -270,12 +270,12 @@ const SellerRideScreen = () => {
         // if (isConnected) {
         //     socketService.emit('sendPickupRequest', {
         //         orderId,
-        //         sellerId: userdata?.id,
-        //         sellerName: userdata?.name || 'Seller',
-        //         buyerId: selectedBuyer.id,
+        //         customerId: userdata?.id,
+        //         customerName: userdata?.name || 'customer',
+        //         collectorId: selectedcollector.id,
         //         items,
         //         totalWeight,
-        //         sellerLocation: currentLocation,
+        //         customerLocation: currentLocation,
         //     });
         // }
     };
@@ -283,15 +283,15 @@ const SellerRideScreen = () => {
     const getStatusInfo = () => {
         switch (rideState.status) {
             case 'idle':
-                return { text: `${nearbyBuyers.length} Buyers Nearby`, color: '#059669', bgColor: '#d1fae5' };
+                return { text: `${nearbycollectors.length} collectors Nearby`, color: '#059669', bgColor: '#d1fae5' };
             case 'pending':
-                return { text: 'Waiting for buyer response...', color: '#f59e0b', bgColor: '#fef3c7' };
+                return { text: 'Waiting for collector response...', color: '#f59e0b', bgColor: '#fef3c7' };
             case 'accepted':
-                return { text: 'Buyer Accepted - Waiting for pickup', color: '#059669', bgColor: '#d1fae5' };
+                return { text: 'collector Accepted - Waiting for pickup', color: '#059669', bgColor: '#d1fae5' };
             case 'completed':
                 return { text: 'Pickup Completed', color: '#10b981', bgColor: '#d1fae5' };
             default:
-                return { text: 'Searching for buyers...', color: '#059669', bgColor: '#d1fae5' };
+                return { text: 'Searching for collectors...', color: '#059669', bgColor: '#d1fae5' };
         }
     };
 
@@ -305,7 +305,7 @@ const SellerRideScreen = () => {
                 coordinates={currentLocation}
                 pickupLocation={null}
                 dropoffLocation={null}
-                nearbyUsers={nearbyBuyers}
+                nearbyUsers={nearbycollectors}
                 acceptanceRadius={ACCEPTANCE_RADIUS_METERS}
             />
 
@@ -352,8 +352,8 @@ const SellerRideScreen = () => {
                 </View>
             )}
 
-            {/* Nearby Buyers List */}
-            {rideState.status === 'idle' && nearbyBuyers.length > 0 && (
+            {/* Nearby collectors List */}
+            {rideState.status === 'idle' && nearbycollectors.length > 0 && (
                 <View className="absolute bottom-28 left-0 right-0 z-50">
                     {/* Blue Zone Info Badge */}
                     <View className="mx-4 mb-2 bg-blue-500 px-4 py-2 rounded-full self-start shadow-md">
@@ -367,37 +367,37 @@ const SellerRideScreen = () => {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={{ paddingHorizontal: 16 }}
                     >
-                        {nearbyBuyers.map((buyer) => (
+                        {nearbycollectors.map((collector) => (
                             <TouchableOpacity
-                                key={buyer.id}
-                                activeOpacity={buyer.available ? 0.8 : 1}
-                                onPress={() => buyer.available && handleSelectBuyer(buyer)}
-                                className={`rounded-2xl p-4 mr-3 shadow-lg ${buyer.available ? 'bg-white' : 'bg-gray-100'}`}
-                                style={{ width: 280, opacity: buyer.available ? 1 : 0.6 }}
-                                disabled={!buyer.available}
+                                key={collector.id}
+                                activeOpacity={collector.available ? 0.8 : 1}
+                                onPress={() => collector.available && handleSelectcollector(collector)}
+                                className={`rounded-2xl p-4 mr-3 shadow-lg ${collector.available ? 'bg-white' : 'bg-gray-100'}`}
+                                style={{ width: 280, opacity: collector.available ? 1 : 0.6 }}
+                                disabled={!collector.available}
                             >
                                 <View className="flex-row items-center justify-between mb-2">
                                     <View className="flex-row items-center">
-                                        <View className={`${buyer.available ? 'bg-emerald-100' : 'bg-gray-200'} p-2 rounded-full`}>
-                                            <User color={buyer.available ? '#059669' : '#9ca3af'} size={20} />
+                                        <View className={`${collector.available ? 'bg-emerald-100' : 'bg-gray-200'} p-2 rounded-full`}>
+                                            <User color={collector.available ? '#059669' : '#9ca3af'} size={20} />
                                         </View>
-                                        <Text className={`ml-2 font-bold text-base ${buyer.available ? 'text-gray-800' : 'text-gray-500'}`}>
-                                            {buyer.name}
+                                        <Text className={`ml-2 font-bold text-base ${collector.available ? 'text-gray-800' : 'text-gray-500'}`}>
+                                            {collector.name}
                                         </Text>
                                     </View>
-                                    <View className={`${buyer.available ? 'bg-emerald-50' : 'bg-red-50'} px-2 py-1 rounded-full`}>
-                                        <Text className={`${buyer.available ? 'text-emerald-700' : 'text-red-600'} text-xs font-bold`}>
-                                            {buyer.distance.toFixed(1)} km
+                                    <View className={`${collector.available ? 'bg-emerald-50' : 'bg-red-50'} px-2 py-1 rounded-full`}>
+                                        <Text className={`${collector.available ? 'text-emerald-700' : 'text-red-600'} text-xs font-bold`}>
+                                            {collector.distance.toFixed(1)} km
                                         </Text>
                                     </View>
                                 </View>
                                 <View className="flex-row items-start mt-2">
                                     <MapPin color="#6b7280" size={14} style={{ marginTop: 2 }} />
-                                    <Text className={`ml-2 text-xs flex-1 ${buyer.available ? 'text-gray-600' : 'text-gray-400'}`} numberOfLines={2}>
-                                        {buyer.address}
+                                    <Text className={`ml-2 text-xs flex-1 ${collector.available ? 'text-gray-600' : 'text-gray-400'}`} numberOfLines={2}>
+                                        {collector.address}
                                     </Text>
                                 </View>
-                                {buyer.available ? (
+                                {collector.available ? (
                                     <View className="mt-3 flex-row items-center justify-center bg-emerald-600 py-2 rounded-lg">
                                         <Send color="#fff" size={16} />
                                         <Text className="ml-2 text-white font-bold text-sm">Send Pickup Request</Text>
@@ -419,11 +419,11 @@ const SellerRideScreen = () => {
                     <ScrollView showsVerticalScrollIndicator={false}>
                         <View className="mt-3 bg-emerald-50 p-4 rounded-2xl border border-emerald-200">
                             <Text className="text-emerald-700 font-bold text-lg mb-2">Send Pickup Request</Text>
-                            {selectedBuyer && (
+                            {selectedcollector && (
                                 <View className="flex-row items-center mb-4 pb-3 border-b border-emerald-200">
                                     <User color="#059669" size={18} />
                                     <Text className="ml-2 font-bold text-gray-800">
-                                        to {selectedBuyer.name}
+                                        to {selectedcollector.name}
                                     </Text>
                                 </View>
                             )}
@@ -580,4 +580,4 @@ const SellerRideScreen = () => {
     );
 };
 
-export default SellerRideScreen;
+export default customerRideScreen;

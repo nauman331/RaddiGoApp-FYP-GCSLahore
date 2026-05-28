@@ -8,11 +8,11 @@ import profileimg from "../assets/profile.png"
 const Header: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { username?: string, role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
-    const role = userdata?.role || 'seller';
+    const role = userdata?.role || 'customer';
 
     const themeColors = {
-        primary: role === 'buyer' ? '#d97706' : '#10b981',
-        primaryLight: role === 'buyer' ? '#fbbf24' : '#34d399',
+        primary: role === 'collector' ? '#d97706' : '#10b981',
+        primaryLight: role === 'collector' ? '#fbbf24' : '#34d399',
     };
 
     return (

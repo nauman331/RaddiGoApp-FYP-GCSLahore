@@ -17,7 +17,7 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({
   navigation,
   route,
 }) => {
-  const role = route?.params?.role || "seller";
+  const role = route?.params?.role || "customer";
   const { mutateAsync, isPending } = useSubmit({
     endpoint: "auth/api/v1/register",
   });
@@ -32,10 +32,10 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({
 
   // Role-based theme colors
   const themeColors = {
-    primary600: role === "seller" ? "#059669" : "#d97706",
-    primary500: role === "seller" ? "#10b981" : "#f59e0b",
-    primary400: role === "seller" ? "#34d399" : "#fbbf24",
-    primary300: role === "seller" ? "#6ee7b7" : "#fcd34d",
+    primary600: role === "customer" ? "#059669" : "#d97706",
+    primary500: role === "customer" ? "#10b981" : "#f59e0b",
+    primary400: role === "customer" ? "#34d399" : "#fbbf24",
+    primary300: role === "customer" ? "#6ee7b7" : "#fcd34d",
   };
 
   const handleInputChange = (field: string, value: string) => {

@@ -16,8 +16,8 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
     const mapRef = useRef<MapView>(null);
 
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { role?: string } };
-    const role = userdata?.role || 'seller';
-    const routeColor = role === 'buyer' ? '#d97706' : '#10b981';
+    const role = userdata?.role || 'customer';
+    const routeColor = role === 'collector' ? '#d97706' : '#10b981';
 
     useEffect(() => {
         const fetchOSRMRoute = async (p: { latitude: number; longitude: number }, d: { latitude: number; longitude: number }) => {
@@ -118,12 +118,12 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
 
  Location */}
                 {dropoffLocation && (
-                    <Marker coordinate={dropoffLocation} title="Seller Location">
+                    <Marker coordinate={dropoffLocation} title="customer Location">
                         <Image source={riderIcon} style={{ width: 40, height: 40 }} />
                     </Marker>
                 )}
 
-                {/* Nearby Users (Buyers for Seller) */}
+                {/* Nearby Users (collectors for customer) */}
                 {nearbyUsers && nearbyUsers.map((user) => (
                     <Marker
                         key={user.id}

@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, Lin
 import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../../store/store'
-import { acceptOrder, updateSellerLocation, setRideStatus, resetRide, updateBuyerLocation, RaddiItem } from '../../store/slices/rideSlice'
+import { acceptOrder, updatecustomerLocation, setRideStatus, resetRide, updatecollectorLocation, RaddiItem } from '../../store/slices/rideSlice'
 import LiveMap from '../../components/LiveMap'
 import Header from '../../components/Header'
 import { getCurrentLocation, getLocationPermission } from '../../utils/getPermissions'
@@ -12,18 +12,18 @@ import { MapPin, Navigation, CheckCircle, XCircle, Package, User, DollarSign, Fi
 
 interface IncomingPickupRequest {
     orderId: string;
-    sellerId: string;
-    sellerName: string;
-    sellerLatitude: number;
-    sellerLongitude: number;
-    sellerAddress: string;
+    customerId: string;
+    customerName: string;
+    customerLatitude: number;
+    customerLongitude: number;
+    customerAddress: string;
     items?: RaddiItem[];
     totalWeight?: string;
     distance?: number;
     estimatedEarnings?: number;
 }
 
-const BuyerRideScreen = () => {
+const collectorRideScreen = () => {
     const dispatch = useDispatch();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; name?: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
@@ -45,14 +45,14 @@ const BuyerRideScreen = () => {
         { id: 'other', label: 'Other', icon: MapPin, color: '#ef4444' },
     ];
 
-    // Dummy seller request for testing
+    // Dummy customer request for testing
     const dummyRequest: IncomingPickupRequest = {
         orderId: 'order-' + Date.now(),
-        sellerId: 'seller-456',
-        sellerName: 'Ali Khan',
-        sellerLatitude: 31.5304,
-        sellerLongitude: 74.3687,
-        sellerAddress: '456 Garden Town, Lahore',
+        customerId: 'customer-456',
+        customerName: 'Ali Khan',
+        customerLatitude: 31.5304,
+        customerLongitude: 74.3687,
+        customerAddress: '456 Garden Town, Lahore',
         distance: 2.5,
         estimatedEarnings: 350,
         totalWeight: '18',
@@ -81,7 +81,7 @@ const BuyerRideScreen = () => {
                 const { latitude, longitude } = (position as { coords: { latitude: number; longitude: number } }).coords;
                 const location = { latitude, longitude };
                 setCurrentLocation(location);
-                dispatch(updateBuyerLocation(location));
+                dispatch(updatecollectorLocation(location));
             } catch (error) {
                 console.error('Location error:', error);
             } finally {
@@ -100,7 +100,7 @@ const BuyerRideScreen = () => {
                 Toast.show({
                     type: ALERT_TYPE.INFO,
                     title: 'New Pickup Request!',
-                    textBody: `${dummyRequest.sellerName} wants you to pickup raddi`,
+                    textBody: `${dummyRequest.customerName} wants you to pickup raddi`,
                 });
             }, 5000);
             return () => clearTimeout(timer);
@@ -114,7 +114,7 @@ const BuyerRideScreen = () => {
             Toast.show({
                 type: ALERT_TYPE.INFO,
                 title: 'New Pickup Request!',
-                textBody: `${data.sellerName} wants you to pickup raddi`,
+                textBody: `${data.customerName} wants you to pickup raddi`,
             });
         });
 
@@ -124,7 +124,7 @@ const BuyerRideScreen = () => {
             Toast.show({
                 type: ALERT_TYPE.WARNING,
                 title: 'Request Cancelled',
-                textBody: 'The seller cancelled the pickup request.',
+                textBody: 'The customer cancelled the pickup request.',
             });
         });
 
@@ -137,15 +137,15 @@ const BuyerRideScreen = () => {
     const handleAcceptRequest = () => {
         if (!incomingRequest) return;
 
-        const sellerLocation = {
-            latitude: incomingRequest.sellerLatitude,
-            longitude: incomingRequest.sellerLongitude,
+        const customerLocation = {
+            latitude: incomingRequest.customerLatitude,
+            longitude: incomingRequest.customerLongitude,
         };
 
         dispatch(acceptOrder({
-            sellerId: incomingRequest.sellerId,
-            sellerName: incomingRequest.sellerName,
-            sellerLocation,
+            customerId: incomingRequest.customerId,
+            customerName: incomingRequest.customerName,
+            customerLocation,
             estimatedTime: 15,
         }));
 
@@ -153,14 +153,14 @@ const BuyerRideScreen = () => {
         Toast.show({
             type: ALERT_TYPE.SUCCESS,
             title: 'Request Accepted!',
-            textBody: `Navigating to ${incomingRequest.sellerName}'s location`,
+            textBody: `Navigating to ${incomingRequest.customerName}'s location`,
         });
 
         // TODO: Uncomment when backend is ready
         // if (isConnected) {
         //     socketService.emit('acceptPickupRequest', {
         //         orderId: incomingRequest.orderId,
-        //         buyerId: userdata?.id,
+        //         collectorId: userdata?.id,
         //     });
         // }
     };
@@ -178,22 +178,22 @@ const BuyerRideScreen = () => {
         // if (isConnected && incomingRequest) {
         //     socketService.emit('rejectPickupRequest', {
         //         orderId: incomingRequest.orderId,
-        //         buyerId: userdata?.id,
+        //         collectorId: userdata?.id,
         //     });
         // }
     };
 
     const handleStartNavigation = () => {
-        if (!rideState.sellerLocation) {
+        if (!rideState.customerLocation) {
             Toast.show({
                 type: ALERT_TYPE.DANGER,
                 title: 'Error',
-                textBody: 'Seller location not available',
+                textBody: 'customer location not available',
             });
             return;
         }
 
-        const { latitude, longitude } = rideState.sellerLocation;
+        const { latitude, longitude } = rideState.customerLocation;
         const url = Platform.select({
             ios: `maps:0,0?q=${latitude},${longitude}`,
             android: `geo:0,0?q=${latitude},${longitude}`,
@@ -268,7 +268,7 @@ const BuyerRideScreen = () => {
 
             <LiveMap
                 coordinates={currentLocation}
-                pickupLocation={rideState.sellerLocation}
+                pickupLocation={rideState.customerLocation}
                 dropoffLocation={null}
             />
 
@@ -286,14 +286,14 @@ const BuyerRideScreen = () => {
                 </Text>
             </View>
 
-            {/* Seller Info Card (when request accepted) */}
-            {rideState.status !== 'idle' && rideState.sellerName && (
+            {/* customer Info Card (when request accepted) */}
+            {rideState.status !== 'idle' && rideState.customerName && (
                 <View className="absolute top-36 mx-4 self-center bg-white p-4 rounded-2xl shadow-xl z-50 w-11/12">
                     <View className="flex-row items-center justify-between mb-2">
                         <View className="flex-row items-center">
                             <User color="#d97706" size={20} />
                             <Text className="ml-2 font-bold text-gray-800 text-lg">
-                                {rideState.sellerName}
+                                {rideState.customerName}
                             </Text>
                         </View>
                         {rideState.estimatedTime && (
@@ -386,12 +386,12 @@ const BuyerRideScreen = () => {
                         {incomingRequest && (
                             <ScrollView showsVerticalScrollIndicator={false}>
                                 <View className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
-                                    {/* Seller Info */}
+                                    {/* customer Info */}
                                     <View className="flex-row items-center justify-between mb-4 pb-3 border-b border-amber-200">
                                         <View className="flex-row items-center">
                                             <User color="#d97706" size={20} />
                                             <Text className="ml-2 font-bold text-gray-800 text-lg">
-                                                {incomingRequest.sellerName}
+                                                {incomingRequest.customerName}
                                             </Text>
                                         </View>
                                         {incomingRequest.estimatedEarnings && (
@@ -408,7 +408,7 @@ const BuyerRideScreen = () => {
                                         <View className="ml-2 flex-1">
                                             <Text className="text-xs text-gray-500 font-semibold">Pickup Location</Text>
                                             <Text className="text-gray-800 font-medium">
-                                                {incomingRequest.sellerAddress}
+                                                {incomingRequest.customerAddress}
                                             </Text>
                                         </View>
                                     </View>
@@ -493,4 +493,4 @@ const BuyerRideScreen = () => {
     );
 };
 
-export default BuyerRideScreen;
+export default collectorRideScreen;
