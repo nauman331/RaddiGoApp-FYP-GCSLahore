@@ -103,13 +103,6 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                         </View>
                     </View>
 
-                    {/* Role badge */}
-                    <View style={[styles.roleBadge, { backgroundColor: theme.light }]}>
-                        <View style={[styles.roleDot, { backgroundColor: theme.primary }]} />
-                        <Text style={[styles.roleText, { color: theme.pillText }]}>
-                            {isCustomer ? '🏠 Seller Account' : '🚛 Collector Account'}
-                        </Text>
-                    </View>
 
                     {/* Form Card */}
                     <View style={styles.card}>

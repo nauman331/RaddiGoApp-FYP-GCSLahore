@@ -76,7 +76,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
     }
 
     // Masked email: jo***@gmail.com
-    const maskedEmail = email.replace(/^(.{2})(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 4)) + c)
+    const maskedEmail = email.replace(/^(.{2})(.*)(@.*)$/, (_ : string, a : string, b : string, c : string) => a + '*'.repeat(Math.min(b.length, 4)) + c)
 
     return (
         <View style={[styles.root, { backgroundColor: '#FAFAFA' }]}>
