@@ -1,15 +1,16 @@
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, TextInput } from 'react-native'
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, TextInput, StatusBar } from 'react-native'
 import React, { useState, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../../store/store'
-import { createOrder, updatecustomerLocation, updatecollectorLocation, setRideStatus, resetRide, RaddiItem, addItem, removeItem } from '../../store/slices/rideSlice'
+import { createOrder, updatecustomerLocation, updatecollectorLocation, setRideStatus, resetRide, RaddiItem } from '../../store/slices/rideSlice'
 import LiveMap from '../../components/LiveMap'
-import Header from '../../components/Header'
 import BottomSheet from '../../components/BottomSheet'
 import { getCurrentLocation, getLocationPermission } from '../../utils/getPermissions'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
-import { MapPin, Navigation, Package, User, DollarSign, TrendingUp, FileText, Smartphone, Boxes, Wine, Layers, Plus, Trash2, Send } from 'lucide-react-native'
+import { MapPin, Navigation, Package, User, DollarSign, FileText, Smartphone, Boxes, Wine, Layers, Plus, Trash2, Send } from 'lucide-react-native'
+
+const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
 
 interface Nearbycollector {
     id: string;
@@ -21,13 +22,12 @@ interface Nearbycollector {
     available: boolean;
 }
 
-const customerRideScreen = () => {
+const CustomerRideScreen = () => {
     const dispatch = useDispatch();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; name?: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const rideState = useSelector((state: RootState) => state.ride);
 
-    // Acceptance radius in kilometers (orders accepted only within this range)
     const ACCEPTANCE_RADIUS_KM = 5;
     const ACCEPTANCE_RADIUS_METERS = ACCEPTANCE_RADIUS_KM * 1000;
 
@@ -35,17 +35,13 @@ const customerRideScreen = () => {
     const [locating, setLocating] = useState(false);
     const [nearbycollectors, setNearbycollectors] = useState<Nearbycollector[]>([]);
     const [selectedcollector, setSelectedcollector] = useState<Nearbycollector | null>(null);
-    const [showOrderForm, setShowOrderForm] = useState(false);
     const [items, setItems] = useState<RaddiItem[]>([]);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [newItem, setNewItem] = useState<{ category: RaddiItem['category'] | null; weight: string; description: string }>({
-        category: null,
-        weight: '',
-        description: '',
+        category: null, weight: '', description: '',
     });
     const bottomSheetRef = useRef<any>(null);
 
-    // Category configurations
     const categories: { id: RaddiItem['category']; label: string; icon: any; color: string }[] = [
         { id: 'paper', label: 'Paper', icon: FileText, color: '#3b82f6' },
         { id: 'plastic', label: 'Plastic', icon: Layers, color: '#f59e0b' },
@@ -56,35 +52,24 @@ const customerRideScreen = () => {
         { id: 'other', label: 'Other', icon: MapPin, color: '#ef4444' },
     ];
 
-    // Helper function to calculate distance between two coordinates (Haversine formula)
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-        const R = 6371; // Earth's radius in km
+        const R = 6371; 
         const dLat = (lat2 - lat1) * (Math.PI / 180);
         const dLon = (lon2 - lon1) * (Math.PI / 180);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * (Math.PI / 180)) *
-            Math.cos(lat2 * (Math.PI / 180)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     };
 
-    // Nearby collectors are provided by the backend via socket events; no local simulation
-
-    // Get and update current location
     useEffect(() => {
         const locationHandler = async () => {
             try {
                 setLocating(true);
                 const granted = await getLocationPermission();
                 if (!granted) {
-                    Toast.show({
-                        type: ALERT_TYPE.DANGER,
-                        title: 'Permission Denied',
-                        textBody: 'Location permission is required. Open app settings to enable.',
-                    });
+                    Toast.show({ type: ALERT_TYPE.DANGER, title: 'Permission Denied', textBody: 'Location permission is required.' });
+                    setCurrentLocation(FALLBACK_LOCATION);
+                    dispatch(updatecustomerLocation(FALLBACK_LOCATION));
                     return;
                 }
                 const position = await getCurrentLocation();
@@ -94,12 +79,13 @@ const customerRideScreen = () => {
                 dispatch(updatecustomerLocation(location));
             } catch (error: any) {
                 console.error('Location error:', error);
-                // provide actionable guidance to the user
-                Toast.show({
-                    type: ALERT_TYPE.DANGER,
-                    title: 'Location Error',
-                    textBody: 'Could not get device location. Ensure GPS/location services are enabled and try again.',
+                Toast.show({ 
+                    type: ALERT_TYPE.WARNING, 
+                    title: 'GPS Timeout', 
+                    textBody: 'Could not get exact location. Using default city center.' 
                 });
+                setCurrentLocation(FALLBACK_LOCATION);
+                dispatch(updatecustomerLocation(FALLBACK_LOCATION));
             } finally {
                 setLocating(false);
             }
@@ -107,7 +93,6 @@ const customerRideScreen = () => {
         locationHandler();
     }, []);
 
-    // Request nearby collectors from backend whenever location becomes available
     useEffect(() => {
         if (currentLocation && rideState.status === 'idle') {
             if (isConnected) {
@@ -117,18 +102,14 @@ const customerRideScreen = () => {
                     radiusMeters: ACCEPTANCE_RADIUS_METERS,
                 });
             } else {
-                // Clear local list until connection is ready
                 setNearbycollectors([]);
             }
         }
     }, [currentLocation, rideState.status, isConnected]);
+
     useEffect(() => {
+        socketService.on('nearbycollectorsUpdate', (data: Nearbycollector[]) => { setNearbycollectors(data); });
 
-        socketService.on('nearbycollectorsUpdate', (data: Nearbycollector[]) => {
-            setNearbycollectors(data);
-        });
-
-        // When server notifies that order was created (response to makeRaddiOrder)
         socketService.on('orderCreated', (data: any) => {
             if (data.success) {
                 Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Sent', textBody: `Request sent to ${data.driverCount} drivers` });
@@ -138,19 +119,15 @@ const customerRideScreen = () => {
             }
         });
 
-        // When server notifies a specific driver accepted the ride for this customer
         socketService.on('rideOrderAccepted', (data: any) => {
             Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Accepted!', textBody: `${data.collectorName || 'Collector'} accepted your pickup request.` });
             dispatch(setRideStatus('accepted'));
-            // update collector info if provided
             if (data.collectorId) {
                 dispatch(updatecollectorLocation({ latitude: data.orderDetails?.collectorLatitude || 0, longitude: data.orderDetails?.collectorLongitude || 0 }));
             }
         });
 
-        // Live driver location updates from backend
         socketService.on('driverLocationUpdate', (data: { driverId: string; latitude: number; longitude: number; orderId?: string }) => {
-            // update nearby collectors list if present
             setNearbycollectors(prev => prev.map(c => {
                 if (c.id === String(data.driverId)) {
                     const distance = currentLocation ? calculateDistance(currentLocation.latitude, currentLocation.longitude, data.latitude, data.longitude) : c.distance;
@@ -159,14 +136,13 @@ const customerRideScreen = () => {
                 return c;
             }));
 
-            // If this driver is assigned to current ride, update ride collector location
             if (rideState.collectorId === String(data.driverId)) {
                 dispatch(updatecollectorLocation({ latitude: data.latitude, longitude: data.longitude }));
             }
         });
 
         socketService.on('pickupRequestRejected', (data: any) => {
-            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Request Rejected', textBody: `${data.collectorName} rejected your pickup request.` });
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Request Rejected', textBody: `${data.collectorName} rejected your request.` });
             dispatch(resetRide());
         });
 
@@ -184,11 +160,7 @@ const customerRideScreen = () => {
 
     const handleAddItem = () => {
         if (!newItem.category || !newItem.weight) {
-            Toast.show({
-                type: ALERT_TYPE.DANGER,
-                title: 'Error',
-                textBody: 'Please select category and enter weight.',
-            });
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: 'Please select category and enter weight.' });
             return;
         }
 
@@ -202,36 +174,22 @@ const customerRideScreen = () => {
         setItems([...items, item]);
         setNewItem({ category: null, weight: '', description: '' });
         setShowCategoryModal(false);
-
-        Toast.show({
-            type: ALERT_TYPE.SUCCESS,
-            title: 'Item Added',
-            textBody: `${newItem.category} item added successfully.`,
-        });
+        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Item Added', textBody: `${newItem.category} added successfully.` });
     };
 
-    const handleRemoveItem = (itemId: string) => {
-        setItems(items.filter(item => item.id !== itemId));
-    };
+    const handleRemoveItem = (itemId: string) => { setItems(items.filter(item => item.id !== itemId)); };
 
-    const getTotalWeight = () => {
-        return items.reduce((sum, item) => sum + parseFloat(item.weight || '0'), 0).toFixed(1);
-    };
+    const getTotalWeight = () => items.reduce((sum, item) => sum + parseFloat(item.weight || '0'), 0).toFixed(1);
 
     const handleSendPickupRequest = () => {
         if (items.length === 0) {
-            Toast.show({
-                type: ALERT_TYPE.DANGER,
-                title: 'Error',
-                textBody: 'Please add at least one item.',
-            });
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: 'Please add at least one item.' });
             return;
         }
 
         const totalWeight = getTotalWeight();
-
-        // Create a temporary local order state to show pending UI immediately
         const tempOrderId = `temp-${Date.now()}`;
+        
         dispatch(createOrder({
             orderId: tempOrderId,
             pickupLocation: currentLocation ?? null as any,
@@ -245,13 +203,8 @@ const customerRideScreen = () => {
         setItems([]);
         setSelectedcollector(null);
 
-        Toast.show({
-            type: ALERT_TYPE.INFO,
-            title: 'Request Sent',
-            textBody: selectedcollector ? `Pickup request sent to ${selectedcollector.name}` : 'Pickup request sent',
-        });
+        Toast.show({ type: ALERT_TYPE.INFO, title: 'Request Sent', textBody: selectedcollector ? `Sent to ${selectedcollector.name}` : 'Pickup request sent' });
 
-        // Send the real request to the backend so it can notify the collector
         if (isConnected) {
             const payload: any = {
                 customerId: Number(userdata?.id) || userdata?.id,
@@ -262,9 +215,7 @@ const customerRideScreen = () => {
                 approximateRaddiInKg: totalWeight,
                 items,
             };
-            // If a specific collector was selected, include collectorId so server can target them
             if (selectedcollector?.id) payload.collectorId = selectedcollector.id;
-
             socketService.emit('makeRaddiOrder', payload);
         } else {
             Toast.show({ type: ALERT_TYPE.WARNING, title: 'Offline', textBody: 'Unable to send request: not connected.' });
@@ -273,312 +224,245 @@ const customerRideScreen = () => {
 
     const getStatusInfo = () => {
         switch (rideState.status) {
-            case 'idle':
-                return { text: `${nearbycollectors.length} collectors Nearby`, color: '#059669', bgColor: '#d1fae5' };
-            case 'pending':
-                return { text: 'Waiting for collector response...', color: '#f59e0b', bgColor: '#fef3c7' };
-            case 'accepted':
-                return { text: 'collector Accepted - Waiting for pickup', color: '#059669', bgColor: '#d1fae5' };
-            case 'completed':
-                return { text: 'Pickup Completed', color: '#10b981', bgColor: '#d1fae5' };
-            default:
-                return { text: 'Searching for collectors...', color: '#059669', bgColor: '#d1fae5' };
+            case 'idle': return { text: `${nearbycollectors.length} Collectors Nearby`, color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
+            case 'pending': return { text: 'Waiting for response...', color: '#d97706', bgColor: '#fef3c7', border: '#fde68a' };
+            case 'accepted': return { text: 'Collector Accepted', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
+            case 'completed': return { text: 'Pickup Completed', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
+            default: return { text: 'Searching...', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
         }
     };
 
     const statusInfo = getStatusInfo();
 
     return (
-        <View style={{ flex: 1 }}>
-            <Header />
+        <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+            <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
 
-            <LiveMap
-                coordinates={currentLocation}
-                pickupLocation={null}
-                dropoffLocation={null}
-                nearbyUsers={nearbycollectors}
-                acceptanceRadius={ACCEPTANCE_RADIUS_METERS}
-            />
+            <View style={{ flex: 1, position: 'relative' }}>
+                <LiveMap
+                    coordinates={currentLocation}
+                    pickupLocation={null}
+                    dropoffLocation={null}
+                    nearbyUsers={nearbycollectors}
+                    acceptanceRadius={ACCEPTANCE_RADIUS_METERS}
+                />
 
-            {locating && (
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 60, backgroundColor: 'rgba(0,0,0,0.3)' }}>
-                    <ActivityIndicator size="large" color="#059669" />
-                    <Text className="text-white mt-2 font-semibold">Getting your location...</Text>
+                {locating && (
+                    <View className="absolute inset-0 justify-center items-center bg-black/30 z-50">
+                        <View className="bg-white p-5 rounded-3xl items-center shadow-2xl">
+                            <ActivityIndicator size="large" color="#059669" />
+                            <Text className="text-gray-800 mt-3 font-bold">Locating...</Text>
+                        </View>
+                    </View>
+                )}
+
+                <View 
+                    className="absolute top-6 self-center px-6 py-2.5 rounded-full shadow-sm z-40 border" 
+                    style={{ backgroundColor: statusInfo.bgColor, borderColor: statusInfo.border }}
+                >
+                    <Text className="font-extrabold text-[13px] uppercase tracking-wider" style={{ color: statusInfo.color }}>
+                        {statusInfo.text}
+                    </Text>
                 </View>
-            )}
 
-            {/* Status Bar */}
-            <View className="absolute top-20 self-center px-6 py-3 rounded-full shadow-lg z-50" style={{ backgroundColor: statusInfo.bgColor }}>
-                <Text className="font-bold" style={{ color: statusInfo.color }}>
-                    {statusInfo.text}
-                </Text>
-            </View>
-
-            {/* Earnings Stats Card */}
-            {rideState.status === 'idle' && (
-                <View className="absolute top-36 mx-4 self-center bg-gradient-to-br from-emerald-600 to-emerald-700 p-5 rounded-2xl shadow-xl z-50 w-11/12">
-                    <View className="flex-row justify-between items-center">
-                        <View>
-                            <Text className="text-emerald-100 text-sm font-semibold">Total Earnings</Text>
-                            <View className="flex-row items-center mt-1">
-                                <DollarSign color="#fff" size={28} strokeWidth={3} />
-                                <Text className="text-white text-3xl font-bold ml-1">
-                                    {rideState.totalEarnings || 0}
-                                </Text>
+                {rideState.status === 'idle' && (
+                    <View className="absolute top-20 mx-5 self-center bg-emerald-600 p-5 rounded-3xl shadow-xl z-40 w-[90%]">
+                        <View className="flex-row justify-between items-center">
+                            <View>
+                                <Text className="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Total Earnings</Text>
+                                <View className="flex-row items-center">
+                                    <Text className="text-emerald-200 text-xl font-bold mr-1">Rs</Text>
+                                    <Text className="text-white text-3xl font-black">
+                                        {rideState.totalEarnings || 0}
+                                    </Text>
+                                </View>
+                            </View>
+                            <View className="bg-white/20 px-5 py-3 rounded-2xl items-center">
+                                <Text className="text-emerald-50 text-[10px] font-bold uppercase tracking-wider mb-0.5">Pickups</Text>
+                                <Text className="text-white text-2xl font-black">{rideState.totalOrders || 0}</Text>
                             </View>
                         </View>
-                        <View className="bg-emerald-500 px-4 py-3 rounded-xl">
-                            <Text className="text-emerald-100 text-xs font-semibold">Pickups</Text>
-                            <Text className="text-white text-2xl font-bold text-center">{rideState.totalOrders || 0}</Text>
-                        </View>
                     </View>
-                    {rideState.totalOrders > 0 && (
-                        <View className="mt-3 pt-3 border-t border-emerald-500 flex-row items-center">
-                            <TrendingUp color="#d1fae5" size={16} />
-                            <Text className="text-emerald-100 text-xs ml-2">
-                                Avg: PKR {Math.round((rideState.totalEarnings || 0) / rideState.totalOrders)} per pickup
+                )}
+
+                {rideState.status === 'idle' && nearbycollectors.length > 0 && (
+                    <View className="absolute bottom-6 left-0 right-0 z-40">
+                        <View className="mx-5 mb-3 bg-white/90 px-4 py-2 rounded-full self-start shadow-sm border border-gray-100 backdrop-blur-md">
+                            <Text className="text-gray-600 text-[11px] font-extrabold uppercase tracking-wider">
+                                📍 Showing collectors within {ACCEPTANCE_RADIUS_KM}km
                             </Text>
                         </View>
-                    )}
-                </View>
-            )}
 
-            {/* Nearby collectors List */}
-            {rideState.status === 'idle' && nearbycollectors.length > 0 && (
-                <View className="absolute bottom-28 left-0 right-0 z-50">
-                    {/* Blue Zone Info Badge */}
-                    <View className="mx-4 mb-2 bg-blue-500 px-4 py-2 rounded-full self-start shadow-md">
-                        <Text className="text-white text-xs font-bold">
-                            🔵 Acceptance Zone: {ACCEPTANCE_RADIUS_KM}km radius
-                        </Text>
-                    </View>
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ paddingHorizontal: 16 }}
-                    >
-                        {nearbycollectors.map((collector) => (
-                            <TouchableOpacity
-                                key={collector.id}
-                                activeOpacity={collector.available ? 0.8 : 1}
-                                onPress={() => collector.available && handleSelectcollector(collector)}
-                                className={`rounded-2xl p-4 mr-3 shadow-lg ${collector.available ? 'bg-white' : 'bg-gray-100'}`}
-                                style={{ width: 280, opacity: collector.available ? 1 : 0.6 }}
-                                disabled={!collector.available}
-                            >
-                                <View className="flex-row items-center justify-between mb-2">
-                                    <View className="flex-row items-center">
-                                        <View className={`${collector.available ? 'bg-emerald-100' : 'bg-gray-200'} p-2 rounded-full`}>
-                                            <User color={collector.available ? '#059669' : '#9ca3af'} size={20} />
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+                            {nearbycollectors.map((collector) => (
+                                <TouchableOpacity
+                                    key={collector.id}
+                                    activeOpacity={collector.available ? 0.8 : 1}
+                                    onPress={() => collector.available && handleSelectcollector(collector)}
+                                    style={{ width: 260, opacity: collector.available ? 1 : 0.6 }}
+                                    disabled={!collector.available}
+                                    className="bg-white rounded-3xl p-5 mr-4 shadow-md border border-gray-100"
+                                >
+                                    <View className="flex-row items-center justify-between mb-3 border-b border-gray-50 pb-3">
+                                        <View className="flex-row items-center">
+                                            <View className={`${collector.available ? 'bg-emerald-50' : 'bg-gray-100'} p-2.5 rounded-full mr-3`}>
+                                                <User color={collector.available ? '#059669' : '#9ca3af'} size={18} />
+                                            </View>
+                                            <Text className={`font-extrabold text-base ${collector.available ? 'text-gray-900' : 'text-gray-400'}`}>
+                                                {collector.name}
+                                            </Text>
                                         </View>
-                                        <Text className={`ml-2 font-bold text-base ${collector.available ? 'text-gray-800' : 'text-gray-500'}`}>
-                                            {collector.name}
-                                        </Text>
-                                    </View>
-                                    <View className={`${collector.available ? 'bg-emerald-50' : 'bg-red-50'} px-2 py-1 rounded-full`}>
-                                        <Text className={`${collector.available ? 'text-emerald-700' : 'text-red-600'} text-xs font-bold`}>
+                                        <Text className={`${collector.available ? 'text-emerald-600' : 'text-gray-400'} text-xs font-black`}>
                                             {collector.distance.toFixed(1)} km
                                         </Text>
                                     </View>
-                                </View>
-                                <View className="flex-row items-start mt-2">
-                                    <MapPin color="#6b7280" size={14} style={{ marginTop: 2 }} />
-                                    <Text className={`ml-2 text-xs flex-1 ${collector.available ? 'text-gray-600' : 'text-gray-400'}`} numberOfLines={2}>
-                                        {collector.address}
-                                    </Text>
-                                </View>
-                                {collector.available ? (
-                                    <View className="mt-3 flex-row items-center justify-center bg-emerald-600 py-2 rounded-lg">
-                                        <Send color="#fff" size={16} />
-                                        <Text className="ml-2 text-white font-bold text-sm">Send Pickup Request</Text>
+                                    <View className="flex-row items-start pr-2">
+                                        <MapPin color="#9ca3af" size={16} />
+                                        <Text className={`ml-2 text-xs font-medium leading-tight flex-1 ${collector.available ? 'text-gray-600' : 'text-gray-400'}`} numberOfLines={2}>
+                                            {collector.address}
+                                        </Text>
                                     </View>
-                                ) : (
-                                    <View className="mt-3 flex-row items-center justify-center bg-gray-300 py-2 rounded-lg">
-                                        <Text className="text-gray-600 font-bold text-xs">Out of Range ({ACCEPTANCE_RADIUS_KM}km)</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
 
-            {/* Pickup Request Form Bottom Sheet */}
-            <BottomSheet ref={bottomSheetRef}>
-                <View className="bg-white w-full rounded-2xl p-4 flex-1">
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                        <View className="mt-3 bg-emerald-50 p-4 rounded-2xl border border-emerald-200">
-                            <Text className="text-emerald-700 font-bold text-lg mb-2">Send Pickup Request</Text>
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    className="absolute bottom-36 right-5 bg-gray-900 px-6 py-4 rounded-full shadow-2xl z-40 flex-row items-center"
+                    onPress={() => bottomSheetRef.current?.present?.()}
+                >
+                    <Plus color="#fff" size={20} strokeWidth={3} />
+                    <Text className="ml-2 text-white font-bold text-sm">New Request</Text>
+                </TouchableOpacity>
+
+                <BottomSheet ref={bottomSheetRef}>
+                    <View className="bg-white w-full rounded-t-[32px] p-6 flex-1">
+                        <Text className="text-2xl font-black text-gray-900 mb-5">Pickup Details</Text>
+                        
+                        <ScrollView showsVerticalScrollIndicator={false}>
                             {selectedcollector && (
-                                <View className="flex-row items-center mb-4 pb-3 border-b border-emerald-200">
-                                    <User color="#059669" size={18} />
-                                    <Text className="ml-2 font-bold text-gray-800">
-                                        to {selectedcollector.name}
-                                    </Text>
+                                <View className="flex-row items-center mb-6 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                                    <User color="#059669" size={20} />
+                                    <View className="ml-3">
+                                        <Text className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Selected Collector</Text>
+                                        <Text className="font-extrabold text-gray-900">{selectedcollector.name}</Text>
+                                    </View>
                                 </View>
                             )}
 
-                            {/* Items Section */}
-                            <View className="mt-2">
-                                <View className="flex-row justify-between items-center">
-                                    <Text className="font-semibold text-gray-700">Items ({items.length})</Text>
-                                    <Text className="text-emerald-600 font-bold">Total: {getTotalWeight()} Kg</Text>
+                            <View className="mb-6">
+                                <View className="flex-row justify-between items-end mb-3 px-1">
+                                    <Text className="font-extrabold text-gray-800 text-lg">Items to Sell</Text>
+                                    <Text className="text-emerald-600 font-black text-sm">{getTotalWeight()} Kg Total</Text>
                                 </View>
 
-                                {/* Items List */}
                                 {items.map((item) => {
                                     const category = categories.find(cat => cat.id === item.category);
                                     const ItemIcon = category?.icon || Package;
                                     return (
-                                        <View key={item.id} className="mt-2 bg-white p-3 rounded-lg border border-emerald-200 flex-row items-center justify-between">
+                                        <View key={item.id} className="mb-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex-row items-center justify-between">
                                             <View className="flex-row items-center flex-1">
-                                                <View style={{ backgroundColor: category?.color + '20', padding: 8, borderRadius: 8 }}>
-                                                    <ItemIcon size={18} color={category?.color || '#10b981'} />
+                                                <View style={{ backgroundColor: category?.color + '15', padding: 10, borderRadius: 12 }}>
+                                                    <ItemIcon size={20} color={category?.color || '#10b981'} />
                                                 </View>
                                                 <View className="ml-3 flex-1">
-                                                    <Text className="font-bold text-gray-800">{category?.label}</Text>
-                                                    <Text className="text-xs text-gray-500">{item.weight} Kg</Text>
-                                                    {item.description && (
-                                                        <Text className="text-xs text-gray-400 mt-0.5">{item.description}</Text>
-                                                    )}
+                                                    <Text className="font-extrabold text-gray-900">{category?.label}</Text>
+                                                    <Text className="text-xs text-gray-500 font-bold">{item.weight} Kg {item.description && `• ${item.description}`}</Text>
                                                 </View>
                                             </View>
-                                            <TouchableOpacity
-                                                onPress={() => handleRemoveItem(item.id)}
-                                                className="p-2 bg-red-50 rounded-lg"
-                                            >
-                                                <Trash2 size={16} color="#ef4444" />
+                                            <TouchableOpacity onPress={() => handleRemoveItem(item.id)} className="p-2.5 bg-red-50 rounded-xl ml-2">
+                                                <Trash2 size={18} color="#ef4444" />
                                             </TouchableOpacity>
                                         </View>
                                     );
                                 })}
 
-                                {/* Add Item Button */}
                                 <TouchableOpacity
                                     onPress={() => setShowCategoryModal(true)}
-                                    className="mt-3 bg-emerald-100 py-3 rounded-lg flex-row items-center justify-center border border-dashed border-emerald-400"
+                                    activeOpacity={0.7}
+                                    className="mt-2 bg-gray-50 py-4 rounded-2xl flex-row items-center justify-center border border-dashed border-gray-300"
                                 >
-                                    <Plus size={20} color="#059669" strokeWidth={2.5} />
-                                    <Text className="ml-2 text-emerald-700 font-bold">Add Item</Text>
+                                    <Plus size={20} color="#6b7280" strokeWidth={2.5} />
+                                    <Text className="ml-2 text-gray-600 font-extrabold text-sm">Add Item</Text>
                                 </TouchableOpacity>
                             </View>
 
                             <TouchableOpacity
                                 disabled={items.length === 0}
                                 onPress={handleSendPickupRequest}
-                                className={`mt-6 rounded-full h-12 items-center justify-center flex-row ${items.length > 0 ? 'bg-emerald-600' : 'bg-gray-400'
-                                    }`}
+                                activeOpacity={0.8}
+                                className={`rounded-2xl py-4 items-center justify-center flex-row shadow-sm mb-10 ${items.length > 0 ? 'bg-emerald-600' : 'bg-gray-300'}`}
                             >
-                                <Send color="#fff" size={20} strokeWidth={2} />
-                                <Text className="text-white font-bold text-lg ml-2">
-                                    Send Pickup Request
-                                </Text>
+                                <Send color="#fff" size={18} strokeWidth={2.5} />
+                                <Text className="text-white font-extrabold text-base ml-2">Submit Request</Text>
                             </TouchableOpacity>
-                        </View>
-                    </ScrollView>
-                </View>
-            </BottomSheet>
+                        </ScrollView>
+                    </View>
+                </BottomSheet>
 
-            {/* Floating button to open Pickup Request form (broadcast if no collector selected) */}
-            <TouchableOpacity
-                activeOpacity={0.9}
-                className="absolute bottom-28 right-6 flex-row items-center bg-emerald-600 border border-white px-6 py-4 rounded-full shadow-lg z-50"
-                onPress={() => bottomSheetRef.current?.present?.()}
-            >
-                <Send color="#fff" size={20} strokeWidth={2} />
-                <Text className="ml-2 text-white font-bold">Request Pickup</Text>
-            </TouchableOpacity>
+                <Modal visible={showCategoryModal} transparent animationType="slide" onRequestClose={() => setShowCategoryModal(false)}>
+                    <View className="flex-1 justify-end bg-black/60">
+                        <View className="bg-white rounded-t-[32px] p-6 pb-10 shadow-2xl">
+                            <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mb-6" />
+                            <Text className="text-2xl font-black text-gray-900 mb-6">Add Item</Text>
 
-            {/* Category Selection Modal */}
-            <Modal
-                visible={showCategoryModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowCategoryModal(false)}
-            >
-                <View className="flex-1 justify-end bg-black/50">
-                    <View className="bg-white rounded-t-3xl p-6 pb-10">
-                        <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
-                        <Text className="text-2xl font-bold text-emerald-600 mb-4">Add Item</Text>
-
-                        {/* Category Selection */}
-                        <Text className="font-semibold text-gray-700 mb-2">Category</Text>
-                        <View className="flex-row flex-wrap gap-2 mb-4">
-                            {categories.map((category) => {
-                                const CategoryIcon = category.icon;
-                                const isSelected = newItem.category === category.id;
-                                return (
-                                    <TouchableOpacity
-                                        key={category.id}
-                                        onPress={() => setNewItem({ ...newItem, category: category.id })}
-                                        style={{
-                                            backgroundColor: isSelected ? category.color : '#f3f4f6',
-                                            borderWidth: 2,
-                                            borderColor: isSelected ? category.color : '#e5e7eb',
-                                        }}
-                                        className="px-4 py-3 rounded-xl flex-row items-center"
-                                    >
-                                        <CategoryIcon size={18} color={isSelected ? '#fff' : category.color} />
-                                        <Text
-                                            style={{ color: isSelected ? '#fff' : '#374151' }}
-                                            className="ml-2 font-semibold"
+                            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Select Category</Text>
+                            <View className="flex-row flex-wrap gap-2 mb-6">
+                                {categories.map((category) => {
+                                    const CategoryIcon = category.icon;
+                                    const isSelected = newItem.category === category.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={category.id}
+                                            activeOpacity={0.8}
+                                            onPress={() => setNewItem({ ...newItem, category: category.id })}
+                                            style={{ backgroundColor: isSelected ? category.color : '#f9fafb', borderColor: isSelected ? category.color : '#f3f4f6' }}
+                                            className="px-4 py-3 rounded-2xl flex-row items-center border-2"
                                         >
-                                            {category.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
+                                            <CategoryIcon size={16} color={isSelected ? '#fff' : category.color} />
+                                            <Text style={{ color: isSelected ? '#fff' : '#4b5563' }} className="ml-2 font-bold text-sm">
+                                                {category.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
 
-                        {/* Weight Input */}
-                        <Text className="font-semibold text-gray-700 mb-2">Weight (Kg)</Text>
-                        <View className="bg-gray-50 px-4 py-1 rounded-lg border border-gray-300 h-14 mb-4">
+                            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Estimated Weight (Kg)</Text>
                             <TextInput
                                 value={newItem.weight}
                                 onChangeText={(text) => setNewItem({ ...newItem, weight: text })}
-                                placeholder="Enter weight in kg"
+                                placeholder="e.g. 5"
                                 placeholderTextColor="#9ca3af"
                                 keyboardType="numeric"
-                                className="flex-1 h-full font-bold text-emerald-600"
+                                className="bg-gray-50 px-5 py-4 rounded-2xl border border-gray-100 font-extrabold text-gray-900 text-base mb-5"
                             />
-                        </View>
 
-                        {/* Description Input */}
-                        <Text className="font-semibold text-gray-700 mb-2">Description (Optional)</Text>
-                        <View className="bg-gray-50 px-4 py-1 rounded-lg border border-gray-300 h-14 mb-6">
+                            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Description (Optional)</Text>
                             <TextInput
                                 value={newItem.description}
                                 onChangeText={(text) => setNewItem({ ...newItem, description: text })}
-                                placeholder="e.g., Old newspapers, plastic bottles"
+                                placeholder="e.g. Plastic bottles, old books"
                                 placeholderTextColor="#9ca3af"
-                                className="flex-1 h-full text-gray-800"
+                                className="bg-gray-50 px-5 py-4 rounded-2xl border border-gray-100 font-medium text-gray-800 text-base mb-8"
                             />
-                        </View>
 
-                        {/* Action Buttons */}
-                        <View className="flex-row gap-3">
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowCategoryModal(false);
-                                    setNewItem({ category: null, weight: '', description: '' });
-                                }}
-                                className="flex-1 bg-gray-200 py-4 rounded-xl"
-                            >
-                                <Text className="text-gray-700 font-bold text-center">Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={handleAddItem}
-                                className="flex-1 bg-emerald-600 py-4 rounded-xl"
-                            >
-                                <Text className="text-white font-bold text-center">Add Item</Text>
-                            </TouchableOpacity>
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity onPress={() => setShowCategoryModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl">
+                                    <Text className="text-gray-700 font-extrabold text-center text-base">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleAddItem} className="flex-1 bg-gray-900 py-4 rounded-2xl shadow-lg">
+                                    <Text className="text-white font-extrabold text-center text-base">Save Item</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
-            </Modal>
+                </Modal>
+            </View>
         </View>
     );
 };
 
-export default customerRideScreen;
+export default CustomerRideScreen;

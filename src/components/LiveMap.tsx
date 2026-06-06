@@ -1,4 +1,4 @@
-import { View, Image, Text } from 'react-native'
+import { View, Image, Text, StyleSheet, ImageStyle, ViewStyle, TextStyle } from 'react-native'
 import React, { useState, useEffect, useRef } from 'react'
 import MapView, { Marker, Polyline, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSelector } from 'react-redux';
@@ -8,6 +8,53 @@ import { LiveMapProps } from '../types/map';
 import riderIcon from '../assets/rider-icon.png';
 import scrapHomeIcon from '../assets/scrap-home.png';
 
+// Type definitions for strictly typed StyleSheet, including specific literal types for alignment properties
+interface MarkerStyle {
+    markerWrapper: ViewStyle;
+    markerImage: ImageStyle;
+    statusBadge: ViewStyle;
+    statusText: TextStyle;
+}
+
+const markerStyles = StyleSheet.create<MarkerStyle>({
+    markerWrapper: {
+        backgroundColor: 'white',
+        borderRadius: 22,
+        padding: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 5, // for Android depth
+        borderWidth: 1.5,
+        borderColor: '#f0f0f0', // subtle inner ring color
+    },
+    markerImage: {
+        width: 40,
+        height: 40,
+        borderRadius: 20, // circular icons
+        resizeMode: 'contain',
+    },
+    statusBadge: {
+        position: 'absolute',
+        backgroundColor: '#ef4444', // prominent red
+        borderRadius: 10,
+        paddingHorizontal: 5,
+        paddingVertical: 2,
+        bottom: -8,
+        zIndex: 10,
+    },
+    statusText: {
+        color: 'white',
+        fontSize: 9,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    }
+});
+
+// Custom map theme logic could go here and be referenced, but assuming it's correctly embedded or retrieved
 
 const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffLocation, nearbyUsers, acceptanceRadius }) => {
     const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
@@ -17,7 +64,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
 
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { role?: string } };
     const role = userdata?.role || 'customer';
-    const routeColor = role === 'collector' ? '#d97706' : '#10b981';
+    const routeColor = role === 'collector' ? '#d97706' : '#10b981'; // amber or emerald
 
     useEffect(() => {
         const fetchOSRMRoute = async (p: { latitude: number; longitude: number }, d: { latitude: number; longitude: number }) => {
@@ -48,17 +95,24 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
 
         if (pickupLocation && dropoffLocation) {
             fetchOSRMRoute(pickupLocation, dropoffLocation);
+        } else if (coordinates && pickupLocation) {
+             // Handle On-Way phase logic if current coords are available
+             fetchOSRMRoute(coordinates, pickupLocation);
         } else {
             setRouteCoordinates([]);
             setDirectionsError(false);
         }
-    }, [pickupLocation, dropoffLocation]);
+    }, [pickupLocation, dropoffLocation, coordinates]); // Ensure current coordinates trigger route update if applicable
 
-    // Fit map to show all markers
+    // Fit map to show all markers/route
     useEffect(() => {
         if (mapRef.current && pickupLocation && dropoffLocation) {
-            const markers = [pickupLocation, dropoffLocation];
-            mapRef.current.fitToCoordinates(markers, {
+            mapRef.current.fitToCoordinates([pickupLocation, dropoffLocation], {
+                edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
+                animated: true,
+            });
+        } else if (mapRef.current && coordinates && pickupLocation) {
+             mapRef.current.fitToCoordinates([coordinates, pickupLocation], {
                 edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
                 animated: true,
             });
@@ -72,7 +126,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
     }, [pickupLocation, dropoffLocation, coordinates]);
 
     const getMapRegion = () => {
-        const center = coordinates ?? (pickupLocation ?? { latitude: 24.8607, longitude: 67.0011 });
+        const center = coordinates ?? (pickupLocation ?? { latitude: 24.8607, longitude: 67.0011 }); // Lahore coordinates or default Karachi
         return {
             latitude: center.latitude,
             longitude: center.longitude,
@@ -96,97 +150,95 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
                 showsMyLocationButton
                 followsUserLocation={!pickupLocation && !dropoffLocation}
             >
-                {/* Current User Location */}
+                {/* Current User Location - Robust Premium Framing */}
                 {coordinates && (
                     <Marker
                         coordinate={coordinates}
                         title="Your Location"
                         description="Current location"
                     >
-                        <Image source={scrapHomeIcon} style={{ width: 40, height: 40 }} />
+                        <View style={markerStyles.markerWrapper}>
+                            <Image source={scrapHomeIcon} style={markerStyles.markerImage} />
+                        </View>
                     </Marker>
                 )}
 
-                {/* Pickup Location */}
+                {/* Pickup Location - Robust Premium Framing */}
                 {pickupLocation && !coordinates && (
                     <Marker coordinate={pickupLocation} title="Pickup Location">
-                        <Image source={scrapHomeIcon} style={{ width: 40, height: 40 }} />
+                        <View style={markerStyles.markerWrapper}>
+                            <Image source={scrapHomeIcon} style={markerStyles.markerImage} />
+                        </View>
                     </Marker>
                 )}
 
-                {/* Dropoff
-
- Location */}
+                {/* Dropoff Location - Robust Premium Framing */}
                 {dropoffLocation && (
-                    <Marker coordinate={dropoffLocation} title="customer Location">
-                        <Image source={riderIcon} style={{ width: 40, height: 40 }} />
+                    <Marker coordinate={dropoffLocation} title="Customer Location">
+                        <View style={markerStyles.markerWrapper}>
+                            <Image source={riderIcon} style={markerStyles.markerImage} />
+                        </View>
                     </Marker>
                 )}
 
-                {/* Nearby Users (collectors for customer) */}
+                {/* Nearby Users - Robust Premium Framing & Badges */}
                 {nearbyUsers && nearbyUsers.map((user) => (
                     <Marker
                         key={user.id}
                         coordinate={{ latitude: user.latitude, longitude: user.longitude }}
                         title={user.name}
                         description={`${user.distance.toFixed(1)} km away - ${user.address}`}
-                        opacity={user.available === false ? 0.5 : 1}
+                        opacity={user.available === false ? 0.6 : 1}
                     >
-                        <View style={{
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: user.available === false ? 0.6 : 1
-                        }}>
+                        <View style={markerStyles.markerWrapper}>
                             <Image
                                 source={riderIcon}
-                                style={{
-                                    width: 40,
-                                    height: 40,
-                                    tintColor: user.available === false ? '#9ca3af' : undefined
-                                }}
+                                style={[markerStyles.markerImage, user.available === false && { tintColor: '#9ca3af' }]} // Tint grey if unavailable
                             />
                             {user.available === false && (
-                                <View style={{
-                                    position: 'absolute',
-                                    backgroundColor: '#ef4444',
-                                    borderRadius: 10,
-                                    paddingHorizontal: 4,
-                                    paddingVertical: 2,
-                                    bottom: -5,
-                                }}>
-                                    <Text style={{ color: 'white', fontSize: 8, fontWeight: 'bold' }}>OUT</Text>
+                                <View style={markerStyles.statusBadge}>
+                                    <Text style={markerStyles.statusText}>OUT</Text>
                                 </View>
                             )}
                         </View>
                     </Marker>
                 ))}
 
-                {/* Acceptance Zone Circle (Blue) */}
+                {/* Acceptance Zone Circle */}
                 {acceptanceRadius && coordinates && (
                     <Circle
                         center={coordinates}
                         radius={acceptanceRadius}
-                        fillColor="rgba(59, 130, 246, 0.15)"
-                        strokeColor="#3b82f6"
+                        fillColor="rgba(59, 130, 246, 0.15)" // subtle blue fill
+                        strokeColor="#3b82f6" // blue stroke
                         strokeWidth={2}
                     />
                 )}
 
-                {/* Route line from OSRM */}
+                {/* Premium Layered Route Lines */}
                 {routeCoordinates.length > 0 && (
-                    <Polyline
-                        coordinates={routeCoordinates}
-                        strokeWidth={5}
-                        strokeColor={routeColor}
-                    />
+                    <>
+                        {/* Wide darker shadow line */}
+                        <Polyline
+                            coordinates={routeCoordinates}
+                            strokeWidth={7}
+                            strokeColor="#00000040" // translucent black for shadow
+                        />
+                         {/* Narrow colored line */}
+                        <Polyline
+                            coordinates={routeCoordinates}
+                            strokeWidth={4}
+                            strokeColor={routeColor}
+                        />
+                    </>
                 )}
 
-                {/* Fallback straight line when directions fail */}
+                {/* Fallback straight line */}
                 {directionsError && pickupLocation && dropoffLocation && (
                     <Polyline
                         coordinates={[pickupLocation, dropoffLocation]}
                         strokeWidth={4}
-                        strokeColor="#ef4444"
+                        strokeColor="#ef4444" // red
                         lineDashPattern={[10, 5]}
                     />
                 )}
