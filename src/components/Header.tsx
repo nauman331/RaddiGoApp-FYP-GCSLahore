@@ -1,61 +1,60 @@
-import { View, Text, Image, TouchableOpacity } from 'react-native'
+import { View, Text, Image, TouchableOpacity, Platform } from 'react-native'
 import React from 'react'
 import { Bell } from "lucide-react-native"
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
 import profileimg from "../assets/profile.png"
 import { useNavigation } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const Header: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { username?: string, role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const role = userdata?.role || 'customer';
 
+    const navigation = useNavigation<any>();
+    const insets = useSafeAreaInsets();
+
     const themeColors = {
         primary: role === 'collector' ? '#d97706' : '#10b981',
-        primaryLight: role === 'collector' ? '#fbbf24' : '#34d399',
     };
 
-    const navigation = useNavigation<any>();
-
     return (
-        <View className='w-full bg-transparent py-4 px-4 flex-row items-center justify-between'>
+        <View 
+            style={{ paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 10 : 20) }} 
+            className='w-full bg-white pb-4 px-5 flex-row items-center justify-between border-b border-gray-100'
+        >
             <View className='flex-row items-center'>
-                <Image
-                    // source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg}
-                    source={profileimg}
-                    alt="Profile Picture"
-                    className='w-12 h-12 rounded-full border-2 border-gray-300'
-                />
-                <View className='ml-2'>
-                    <Text className='text-lg font-semibold'>Hi {userdata?.username || "User"}</Text>
-                    <Text className={`text-sm font-bold ${isConnected ? "text-green-500" : "text-red-500"}    `}>{isConnected ? "Online" : "Offline"}</Text>
+                {/* Profile Picture with Status Indicator */}
+                <View className='relative'>
+                    <Image
+                        // source={userdata?.profilePicture ? { uri: userdata.profilePicture } : profileimg}
+                        source={profileimg}
+                        alt="Profile Picture"
+                        className='w-12 h-12 rounded-full bg-gray-100'
+                    />
+                    <View 
+                        className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
+                    />
+                </View>
+                
+                {/* Greeting */}
+                <View className='ml-3'>
+                    <Text className='text-xs text-gray-500 font-medium mb-0.5'>Welcome back,</Text>
+                    <Text className='text-lg font-extrabold text-gray-800 leading-tight'>
+                        {userdata?.username || "User"}
+                    </Text>
                 </View>
             </View>
+
+            {/* Notification Bell */}
             <TouchableOpacity
                 onPress={() => navigation.navigate('Notifications')}
-                style={{
-                    backgroundColor: '#f3f4f6',
-                    borderWidth: 2,
-                    borderColor: themeColors.primaryLight,
-                    padding: 8,
-                    borderRadius: 9999,
-                    position: 'relative'
-                }}>
-                <Bell size={16} color="#4B5563" />
-                <View style={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    backgroundColor: '#EF4444',
-                    borderRadius: 10,
-                    width: 15,
-                    height: 15,
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    <Text className='text-white text-xs font-bold'>0</Text>
-                </View>
+                className='bg-gray-50 p-2.5 rounded-full relative'
+            >
+                <Bell size={22} color="#374151" strokeWidth={2} />
+                {/* Unread Badge */}
+                <View className='absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white' />
             </TouchableOpacity>
         </View>
     )

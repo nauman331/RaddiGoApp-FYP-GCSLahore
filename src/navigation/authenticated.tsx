@@ -1,5 +1,7 @@
+import React from 'react';
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { View, Platform } from "react-native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { View, Platform, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -8,109 +10,135 @@ import Profile from "../screens/authenticated/Profile";
 import Activity from "../screens/authenticated/Activity";
 import collectorRideScreen from "../screens/authenticated/BuyerRideScreen";
 import customerRideScreen from "../screens/authenticated/SellerRideScreen";
-import { Home as HomeIcon, User, MapPin, Activity as ActivityIcon } from "lucide-react-native";
+import { Home as HomeIcon, Clock, User, ChevronLeft, MapPin } from "lucide-react-native";
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
-export default function AuthenticatedStack() {
+function MainTabNavigator() {
     const insets = useSafeAreaInsets();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
     const role = userdata?.role || 'customer';
-
-    const RideScreen = role === 'collector' ? collectorRideScreen : customerRideScreen;
-    const rideLabel = role === 'collector' ? 'Pickups' : 'Find collectors';
+    
     const primaryColor = role === 'collector' ? '#d97706' : '#10b981';
-    const primaryColorLight = role === 'collector' ? '#d9770615' : '#10b98115';
 
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: '#eee',
-                    height: Platform.OS === 'ios' ? 90 : 70 + insets.bottom,
-                    paddingBottom: Platform.OS === 'ios' ? 30 + insets.bottom : 10 + insets.bottom,
+                    backgroundColor: '#ffffff',
+                    height: Platform.OS === 'ios' ? 85 : 65 + insets.bottom,
+                    paddingBottom: Platform.OS === 'ios' ? 25 : 10 + insets.bottom,
                     paddingTop: 10,
                     borderTopWidth: 1,
-                    shadowOpacity: 0.1,
-                    shadowRadius: 12,
-                    position: 'absolute',
+                    borderTopColor: '#f3f4f6', 
+                    elevation: 0,
+                    shadowOpacity: 0,
                 },
                 tabBarActiveTintColor: primaryColor,
                 tabBarInactiveTintColor: '#9CA3AF',
-                tabBarShowLabel: true,
-                tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: '600',
-                    marginTop: 4,
-                },
+                tabBarShowLabel: false, 
                 tabBarIcon: ({ focused, color }) => {
                     let IconComponent;
-                    let iconSize = 24;
-
-                    if (route.name === 'Home') {
-                        IconComponent = HomeIcon;
-                    } else if (route.name === 'Activity') {
-                        IconComponent = ActivityIcon;
-                    } else if (route.name === 'Ride') {
-                        IconComponent = MapPin;
-                    } else if (route.name === 'Profile') {
-                        IconComponent = User;
-                    }
+                    if (route.name === 'Home') IconComponent = HomeIcon;
+                    if (route.name === 'Activity') IconComponent = Clock;
+                    if (route.name === 'Profile') IconComponent = User;
 
                     return (
-                        <View
-                            style={{
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: 44,
-                                height: 44,
-                                borderRadius: 22,
-                                backgroundColor: focused ? primaryColorLight : 'transparent',
-                            }}
-                        >
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                             {IconComponent && (
                                 <IconComponent
-                                    size={iconSize}
+                                    size={24}
                                     color={color}
                                     strokeWidth={focused ? 2.5 : 2}
                                 />
+                            )}
+                            {focused && (
+                                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: primaryColor, marginTop: 4 }} />
                             )}
                         </View>
                     );
                 },
             })}
-            initialRouteName="Ride"
-            backBehavior="history"
         >
-            <Tab.Screen
-                name="Home"
-                component={Home}
-                options={{
-                    tabBarLabel: 'Home',
-                }}
-            />
-            <Tab.Screen
-                name="Activity"
-                component={Activity}
-                options={{
-                    tabBarLabel: 'Activity',
-                }}
-            />
-            <Tab.Screen
-                name="Ride"
-                component={RideScreen}
-                options={{
-                    tabBarLabel: rideLabel,
-                }}
-            />
-            <Tab.Screen
-                name="Profile"
-                component={Profile}
-                options={{
-                    tabBarLabel: 'Account',
-                }}
-            />
+            <Tab.Screen name="Home" component={Home} />
+            <Tab.Screen name="Activity" component={Activity} />
+            <Tab.Screen name="Profile" component={Profile} />
         </Tab.Navigator>
+    );
+}
+
+export default function AuthenticatedStack() {
+    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
+    const role = userdata?.role || 'customer';
+
+    const RideScreen = role === 'collector' ? collectorRideScreen : customerRideScreen;
+    const rideLabel = role === 'collector' ? 'Book a Pickup' : 'Book a Ride';
+    const primaryColor = role === 'collector' ? '#d97706' : '#10b981';
+
+    return (
+        <Stack.Navigator
+            initialRouteName="MainTabs"
+            screenOptions={({ navigation }) => ({
+                headerStyle: {
+                    backgroundColor: '#ffffff',
+                    elevation: 0,
+                    shadowOpacity: 0,
+                },
+                headerTitleStyle: {
+                    fontSize: 18,
+                    fontWeight: '600',
+                    color: '#1f2937',
+                },
+                headerTitleAlign: 'center',
+                headerLeft: ({ canGoBack }) => canGoBack ? (
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={{
+                            marginLeft: 20,
+                            width: 40,
+                            height: 40,
+                            backgroundColor: '#f3f4f6', 
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <ChevronLeft size={24} color="#374151" strokeWidth={2} />
+                    </TouchableOpacity>
+                ) : null,
+                headerRight: () => (
+                    <TouchableOpacity
+                        style={{
+                            marginRight: 20,
+                            width: 40,
+                            height: 40,
+                            backgroundColor: '#f3f4f6',
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <MapPin size={20} color="#374151" strokeWidth={2} />
+                    </TouchableOpacity>
+                ),
+                cardStyle: { backgroundColor: '#ffffff' },
+            })}
+        >
+            <Stack.Screen 
+                name="MainTabs" 
+                component={MainTabNavigator} 
+                options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+                name="Ride" 
+                component={RideScreen} 
+                options={{ 
+                    title: rideLabel,
+                    headerShown: true, 
+                }} 
+            />
+        </Stack.Navigator>
     );
 }
