@@ -8,10 +8,10 @@ import {
     Animated,
     StyleSheet,
     Dimensions,
+    Image,                // <-- Import Image
 } from 'react-native'
 import { Home, Truck, ArrowRight, Zap, Clock, Leaf, MapPin, DollarSign } from 'lucide-react-native'
-
-const { width } = Dimensions.get('window')
+import LogoImage from '../../assets/half-logo.jpeg'  // <-- Import the logo
 
 const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const [role, setRole] = useState<'customer' | 'collector'>('customer')
@@ -64,9 +64,7 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
 
                 <View style={styles.header}>
-                    <View style={[styles.logoBox, { backgroundColor: accentLight }]}>
-                        <Text style={styles.logoIcon}>♻️</Text>
-                    </View>
+                        <Image source={LogoImage} style={styles.logoImage} resizeMode="contain" />
                     <View>
                         <Text style={styles.brandName}>RaddiGo</Text>
                         <Text style={[styles.brandUrdu, { color: accent }]}>بیچو۔ کماؤ۔ دہراؤ</Text>
@@ -198,7 +196,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 12,
     },
-    logoBox: {
+    logoImage: {
         width: 44,
         height: 44,
         borderRadius: 14,
@@ -206,9 +204,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: '#f1f5f9',
-    },
-    logoIcon: {
-        fontSize: 22,
     },
     brandName: {
         fontSize: 22,
