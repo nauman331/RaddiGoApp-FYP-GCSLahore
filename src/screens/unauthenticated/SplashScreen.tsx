@@ -91,7 +91,7 @@ const SplashScreen: React.FC = ({ navigation }: any) => {
                 {/* Modern Pill-shaped Subtitle */}
                 <View className="mt-3 bg-emerald-50 px-5 py-2 rounded-full border border-emerald-100 shadow-sm">
                     <Text className="text-emerald-700 text-xs font-extrabold uppercase tracking-widest">
-                        Pickup to Doorstep
+                        Apke Darwazay Tak
                     </Text>
                 </View>
             </Animated.View>

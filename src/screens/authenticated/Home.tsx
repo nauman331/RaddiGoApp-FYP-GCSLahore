@@ -124,7 +124,7 @@ const Home: React.FC = ({ navigation }: any) => {
                                 activeOpacity={0.7}
                                 className="flex-1 items-center"
                                 onPress={() => {
-                                    if(action.route === 'Activity' || action.route === 'Profile') {
+                                    if(action.route === 'Activity' || action.route === 'Profile' || action.route === 'Wallet') {
                                         navigation.navigate(action.route);
                                     }
                                 }}

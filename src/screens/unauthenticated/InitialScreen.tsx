@@ -5,214 +5,172 @@ import {
     TouchableOpacity,
     SafeAreaView,
     StatusBar,
-    Image,
     Animated,
-    Dimensions,
     StyleSheet,
-    Platform,
+    Dimensions,
 } from 'react-native'
-import { DollarSign, Package, Zap, Home, Recycle, Truck, ArrowRight, Leaf, MapPin } from 'lucide-react-native'
-import Logo from "../../assets/half-logo.jpeg"
+import { Home, Truck, ArrowRight, Zap, Clock, Leaf, MapPin, DollarSign } from 'lucide-react-native'
 
-const { width, height } = Dimensions.get('window')
+const { width } = Dimensions.get('window')
 
 const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const [role, setRole] = useState<'customer' | 'collector'>('customer')
-    const slideAnim = useRef(new Animated.Value(0)).current
     const fadeAnim = useRef(new Animated.Value(0)).current
-    const cardScale = useRef(new Animated.Value(0.96)).current
-    const pillAnim = useRef(new Animated.Value(0)).current
 
     useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-            Animated.spring(cardScale, {
-                toValue: 1,
-                tension: 60,
-                friction: 8,
-                useNativeDriver: true,
-            }),
-        ]).start()
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+        }).start()
     }, [])
 
-    const handleRoleSwitch = (newRole: 'customer' | 'collector') => {
-        if (newRole === role) return
-        setRole(newRole)
-
-        Animated.sequence([
-            Animated.timing(pillAnim, {
-                toValue: 1,
-                duration: 150,
-                useNativeDriver: true,
-            }),
-            Animated.timing(pillAnim, {
-                toValue: 0,
-                duration: 150,
-                useNativeDriver: true,
-            }),
-        ]).start()
-    }
-
     const isCustomer = role === 'customer'
+    const accent = isCustomer ? '#059669' : '#d97706'
+    const accentLight = isCustomer ? '#ecfdf5' : '#fffbeb'
 
-    // Theme colors
-    const theme = {
-        primary: isCustomer ? '#0A7A4A' : '#C85A00',
-        primaryLight: isCustomer ? '#E8F5EE' : '#FEF3E7',
-        primaryMid: isCustomer ? '#1AA061' : '#F07520',
-        accent: isCustomer ? '#05C26B' : '#FF8C3A',
-        bg: isCustomer ? '#F0FAF5' : '#FFF8F0',
-        pillBg: isCustomer ? '#D1EDE0' : '#FFE4C4',
-        pillText: isCustomer ? '#0A7A4A' : '#9A3D00',
-        pillIcon: isCustomer ? '#0A7A4A' : '#C85A00',
+    const customerContent = {
+        eyebrow: 'SELLERS KE LIYE',
+        titleLine1: 'Ghar baithe',
+        titleAccent: 'raddi becho',
+        sub: 'Apna scrap list karo, hum rider bhejtay hain. Same day payment, zero jhanjhat.',
+        features: [
+            { icon: Zap, label: 'Aaj payment' },
+            { icon: Clock, label: '2 ghante mein' },
+            { icon: Leaf, label: 'Mahaul bachao' },
+        ],
     }
 
-    const customerFeatures = [
-        { icon: DollarSign, text: 'Earn Instantly', sub: 'Get paid same day' },
-        { icon: Package, text: 'Easy Listing', sub: 'List in 60 seconds' },
-        { icon: Zap, text: 'Fast Pickup', sub: 'Within 2 hours' },
-    ]
+    const collectorContent = {
+        eyebrow: 'COLLECTORS KE LIYE',
+        titleLine1: 'Apna schedule',
+        titleAccent: 'pickup lo',
+        sub: 'Apne ilaaké mein pickups lo, paisa kamao. Flexible timings, full support.',
+        features: [
+            { icon: Clock, label: 'Apna time chuno' },
+            { icon: MapPin, label: 'Map se dhundo' },
+            { icon: DollarSign, label: 'Daily kamao' },
+        ],
+    }
 
-    const collectorFeatures = [
-        { icon: MapPin, text: 'Doorstep Service', sub: 'We come to you' },
-        { icon: Leaf, text: 'Go Green', sub: 'Reduce waste daily' },
-        { icon: Zap, text: 'Quick & Easy', sub: 'Zero hassle' },
-    ]
-
-    const features = isCustomer ? customerFeatures : collectorFeatures
+    const content = isCustomer ? customerContent : collectorContent
 
     return (
-        <SafeAreaView style={[styles.root, { backgroundColor: '#FFFFFF' }]}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <SafeAreaView style={styles.root}>
+            <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
 
-            {/* Top accent bar */}
-            <View style={[styles.topAccent, { backgroundColor: theme.primary }]} />
+            <View style={[styles.topBar, { backgroundColor: accent }]} />
 
             <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
 
-                {/* Header */}
                 <View style={styles.header}>
-                    <View style={styles.logoWrap}>
-                        <Image source={Logo} style={styles.logo} resizeMode="contain" />
+                    <View style={[styles.logoBox, { backgroundColor: accentLight }]}>
+                        <Text style={styles.logoIcon}>♻️</Text>
                     </View>
                     <View>
-                        <Text style={styles.brandName}>Raddi</Text>
-                        <Text style={styles.brandTag}>Recycle. Earn. Repeat.</Text>
+                        <Text style={styles.brandName}>RaddiGo</Text>
+                        <Text style={[styles.brandUrdu, { color: accent }]}>بیچو۔ کماؤ۔ دہراؤ</Text>
+                    </View>
+                    <View style={styles.countryBadge}>
+                        <Text style={styles.countryText}>🇵🇰 Pakistan</Text>
                     </View>
                 </View>
 
-                {/* Hero Card */}
-                <Animated.View style={[
-                    styles.heroCard,
-                    { backgroundColor: theme.primaryLight, transform: [{ scale: cardScale }] }
-                ]}>
-                    {/* Decorative circle */}
-                    <View style={[styles.decorCircle, { backgroundColor: theme.accent, opacity: 0.08 }]} />
-                    <View style={[styles.decorCircleSmall, { backgroundColor: theme.primary, opacity: 0.06 }]} />
-
-                    <View style={[styles.iconBadge, { backgroundColor: theme.primary }]}>
-                        {isCustomer
-                            ? <Home size={22} color="#fff" strokeWidth={2} />
-                            : <Truck size={22} color="#fff" strokeWidth={2} />
-                        }
+                <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>ACCOUNT TYPE</Text>
+                    <View style={styles.toggleBar}>
+                        {(['customer', 'collector'] as const).map((r) => {
+                            const active = role === r
+                            const Icon = r === 'customer' ? Home : Truck
+                            return (
+                                <TouchableOpacity
+                                    key={r}
+                                    style={[
+                                        styles.toggleBtn,
+                                        active && { backgroundColor: accent, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+                                    ]}
+                                    onPress={() => setRole(r)}
+                                    activeOpacity={0.8}
+                                >
+                                    <Icon
+                                        size={16}
+                                        color={active ? '#ffffff' : '#64748b'}
+                                        strokeWidth={2.5}
+                                    />
+                                    <Text style={[styles.toggleBtnText, { color: active ? '#ffffff' : '#64748b' }]}>
+                                        {r === 'customer' ? 'Customer' : 'Collector'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )
+                        })}
                     </View>
+                </View>
 
-                    <Text style={styles.heroTitle}>
-                        {isCustomer
-                            ? 'Sell Your Raddi\nWithout Leaving Home'
-                            : 'Schedule a Raddi\nPickup Anytime'
-                        }
-                    </Text>
-                    <Text style={[styles.heroSub, { color: '#555' }]}>
-                        {isCustomer
-                            ? 'List your scrap, our rider arrives at your door. Fast, contactless, and rewarding.'
-                            : 'Request a doorstep pickup — we handle sorting, you save the planet.'}
-                    </Text>
-
-                    {/* Feature pills */}
+                <View style={styles.heroCard}>
+                    <View style={[styles.heroCornerAccent, { backgroundColor: accent }]} />
+                    <View style={styles.heroTop}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.heroEyebrow, { color: accent }]}>{content.eyebrow}</Text>
+                            <Text style={styles.heroTitle}>
+                                {content.titleLine1}{'\n'}
+                                <Text style={{ color: accent }}>{content.titleAccent}</Text>
+                            </Text>
+                        </View>
+                        <View style={[styles.heroIcon, { backgroundColor: accent }]}>
+                            {isCustomer
+                                ? <Home size={24} color="#ffffff" strokeWidth={2.5} />
+                                : <Truck size={24} color="#ffffff" strokeWidth={2.5} />
+                            }
+                        </View>
+                    </View>
+                    <Text style={styles.heroSub}>{content.sub}</Text>
                     <View style={styles.pillRow}>
-                        {features.map((f, i) => {
+                        {content.features.map((f, i) => {
                             const Icon = f.icon
                             return (
-                                <View key={i} style={[styles.pill, { backgroundColor: theme.pillBg }]}>
-                                    <Icon size={13} color={theme.pillIcon} strokeWidth={2.5} />
-                                    <Text style={[styles.pillText, { color: theme.pillText }]}>{f.text}</Text>
+                                <View key={i} style={styles.pill}>
+                                    <Icon size={14} color={accent} strokeWidth={2.5} />
+                                    <Text style={styles.pillText}>{f.label}</Text>
                                 </View>
                             )
                         })}
                     </View>
-                </Animated.View>
+                </View>
 
-                {/* Role Toggle */}
-                <View style={styles.toggleSection}>
-                    <Text style={styles.toggleLabel}>Who are you?</Text>
-                    <View style={styles.toggleBar}>
-                        {/* Sliding indicator */}
-                        <Animated.View
-                            style={[
-                                styles.toggleIndicator,
-                                {
-                                    backgroundColor: isCustomer ? '#0A7A4A' : '#C85A00',
-                                    left: isCustomer ? 4 : '50%',
-                                }
-                            ]}
-                        />
-                        <TouchableOpacity
-                            style={styles.toggleBtn}
-                            onPress={() => handleRoleSwitch('customer')}
-                            activeOpacity={0.8}
-                        >
-                            <Home size={16} color={isCustomer ? '#fff' : '#888'} strokeWidth={2} />
-                            <Text style={[styles.toggleBtnText, isCustomer && styles.toggleBtnActive]}>
-                                Seller
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.toggleBtn}
-                            onPress={() => handleRoleSwitch('collector')}
-                            activeOpacity={0.8}
-                        >
-                            <Truck size={16} color={!isCustomer ? '#fff' : '#888'} strokeWidth={2} />
-                            <Text style={[styles.toggleBtnText, !isCustomer && styles.toggleBtnActive]}>
-                                Collector
-                            </Text>
-                        </TouchableOpacity>
+                <View style={styles.statsRow}>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statLabel}>Avg. Earning</Text>
+                        <Text style={[styles.statValue, { color: accent }]}>Rs 850</Text>
+                        <Text style={styles.statSub}>per pickup</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statLabel}>Cities</Text>
+                        <Text style={styles.statValueDark}>12+</Text>
+                        <Text style={styles.statSub}>KHI · LHR · ISB</Text>
                     </View>
                 </View>
 
-                {/* CTA Buttons */}
                 <View style={styles.ctaSection}>
-                    {/* Primary CTA */}
                     <TouchableOpacity
                         onPress={() => navigation.navigate('SignUp', { role })}
+                        style={[styles.primaryBtn, { backgroundColor: accent }]}
                         activeOpacity={0.85}
-                        style={[styles.primaryBtn, { backgroundColor: theme.primary }]}
                     >
-                        <Text style={styles.primaryBtnText}>Get Started</Text>
-                        <View style={[styles.arrowCircle, { backgroundColor: theme.primaryMid }]}>
-                            <ArrowRight size={18} color="#fff" strokeWidth={2.5} />
-                        </View>
+                        <Text style={styles.primaryBtnText}>Shuru karo</Text>
+                        <ArrowRight size={20} color="#ffffff" strokeWidth={3} />
                     </TouchableOpacity>
 
-                    {/* Login CTA */}
                     <TouchableOpacity
                         onPress={() => navigation.navigate('SignIn', { role })}
                         activeOpacity={0.7}
                         style={styles.loginBtn}
                     >
                         <Text style={styles.loginText}>
-                            Already have an account?{' '}
-                            <Text style={[styles.loginLink, { color: theme.primary }]}>Sign In</Text>
+                            Pehle se account hai?{' '}
+                            <Text style={[styles.loginLink, { color: accent }]}>Sign in karo</Text>
                         </Text>
                     </TouchableOpacity>
                 </View>
-
-                {/* Footer */}
-                <Text style={styles.footer}>🇵🇰 Made in Pakistan · Eco-first</Text>
 
             </Animated.View>
         </SafeAreaView>
@@ -222,214 +180,252 @@ const InitialScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 const styles = StyleSheet.create({
     root: {
         flex: 1,
+        backgroundColor: '#f8fafc',
     },
-    topAccent: {
-        height: 3,
+    topBar: {
+        height: 4,
         width: '100%',
     },
     container: {
         flex: 1,
-        paddingHorizontal: 22,
+        paddingHorizontal: 20,
         paddingTop: 20,
-        paddingBottom: 16,
-        justifyContent: 'space-between',
+        paddingBottom: 32,
+        gap: 16,
     },
-
-    // Header
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        marginBottom: 4,
     },
-    logoWrap: {
-        width: 46,
-        height: 46,
-        borderRadius: 14,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-    },
-    logo: {
-        width: 46,
-        height: 46,
-    },
-    brandName: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#111',
-        letterSpacing: -0.5,
-    },
-    brandTag: {
-        fontSize: 12,
-        color: '#888',
-        fontWeight: '500',
-        letterSpacing: 0.2,
-        marginTop: 1,
-    },
-
-    // Hero Card
-    heroCard: {
-        borderRadius: 24,
-        padding: 24,
-        paddingTop: 28,
-        overflow: 'hidden',
-        position: 'relative',
-        marginTop: 4,
-    },
-    decorCircle: {
-        position: 'absolute',
-        width: 200,
-        height: 200,
-        borderRadius: 100,
-        top: -60,
-        right: -60,
-    },
-    decorCircleSmall: {
-        position: 'absolute',
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        bottom: -30,
-        left: 20,
-    },
-    iconBadge: {
-        width: 46,
-        height: 46,
+    logoBox: {
+        width: 44,
+        height: 44,
         borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
-    heroTitle: {
-        fontSize: 24,
+    logoIcon: {
+        fontSize: 22,
+    },
+    brandName: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#0f172a',
+        letterSpacing: -0.5,
+    },
+    brandUrdu: {
+        fontSize: 12,
         fontWeight: '800',
-        color: '#111',
-        lineHeight: 32,
-        letterSpacing: -0.6,
-        marginBottom: 10,
+        letterSpacing: 0.5,
+        marginTop: 2,
     },
-    heroSub: {
-        fontSize: 14,
-        lineHeight: 21,
-        fontWeight: '400',
-        marginBottom: 18,
-    },
-    pillRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    pill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
+    countryBadge: {
+        marginLeft: 'auto',
+        backgroundColor: '#ffffff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
         paddingHorizontal: 12,
-        paddingVertical: 7,
-        borderRadius: 100,
+        paddingVertical: 8,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
-    pillText: {
+    countryText: {
         fontSize: 12,
         fontWeight: '700',
-        letterSpacing: 0.1,
+        color: '#475569',
     },
-
-    // Role Toggle
-    toggleSection: {
-        marginTop: 8,
+    section: {
+        gap: 10,
     },
-    toggleLabel: {
+    sectionLabel: {
         fontSize: 11,
-        fontWeight: '600',
-        color: '#999',
-        textTransform: 'uppercase',
-        letterSpacing: 1.2,
-        marginBottom: 10,
-        textAlign: 'center',
+        color: '#94a3b8',
+        fontWeight: '800',
+        letterSpacing: 1.5,
     },
     toggleBar: {
         flexDirection: 'row',
-        backgroundColor: '#F3F3F3',
+        backgroundColor: '#f1f5f9',
         borderRadius: 16,
-        padding: 4,
-        position: 'relative',
-        height: 52,
-    },
-    toggleIndicator: {
-        position: 'absolute',
-        top: 4,
-        bottom: 4,
-        width: '49%',
-        borderRadius: 13,
+        padding: 5,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
     },
     toggleBtn: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        zIndex: 1,
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
     },
     toggleBtnText: {
         fontSize: 14,
+        fontWeight: '800',
+    },
+    heroCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        padding: 24,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        overflow: 'hidden',
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    heroCornerAccent: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 120,
+        height: 120,
+        borderBottomLeftRadius: 120,
+        opacity: 0.05,
+    },
+    heroTop: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    heroEyebrow: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.5,
+        marginBottom: 8,
+    },
+    heroTitle: {
+        fontSize: 26,
+        fontWeight: '900',
+        color: '#0f172a',
+        lineHeight: 32,
+        letterSpacing: -0.5,
+    },
+    heroIcon: {
+        width: 52,
+        height: 52,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        marginLeft: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    heroSub: {
+        fontSize: 14,
+        color: '#64748b',
+        lineHeight: 22,
+        fontWeight: '500',
+        marginBottom: 20,
+    },
+    pillRow: {
+        flexDirection: 'row',
+        gap: 8,
+        flexWrap: 'wrap',
+    },
+    pill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    pillText: {
+        fontSize: 12,
+        color: '#475569',
+        fontWeight: '700',
+    },
+    statsRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        padding: 18,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#94a3b8',
+        fontWeight: '700',
+        marginBottom: 8,
+    },
+    statValue: {
+        fontSize: 24,
+        fontWeight: '900',
+    },
+    statValueDark: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#0f172a',
+    },
+    statSub: {
+        fontSize: 11,
+        color: '#64748b',
         fontWeight: '600',
-        color: '#999',
+        marginTop: 4,
     },
-    toggleBtnActive: {
-        color: '#FFFFFF',
-    },
-
-    // CTA
     ctaSection: {
-        gap: 0,
+        marginTop: 'auto',
+        gap: 6,
     },
     primaryBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 16,
-        paddingLeft: 28,
-        paddingRight: 16,
-        borderRadius: 18,
+        justifyContent: 'center',
+        gap: 10,
+        paddingVertical: 18,
+        borderRadius: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0.15,
         shadowRadius: 12,
-        elevation: 5,
+        elevation: 4,
     },
     primaryBtnText: {
-        color: '#fff',
-        fontSize: 17,
-        fontWeight: '700',
-        letterSpacing: -0.2,
-    },
-    arrowCircle: {
-        width: 38,
-        height: 38,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
+        fontSize: 18,
+        fontWeight: '900',
+        color: '#ffffff',
     },
     loginBtn: {
         alignItems: 'center',
-        paddingVertical: 16,
+        paddingVertical: 18,
     },
     loginText: {
         fontSize: 14,
-        color: '#888',
-        fontWeight: '500',
+        color: '#64748b',
+        fontWeight: '600',
     },
     loginLink: {
-        fontWeight: '700',
-    },
-
-    // Footer
-    footer: {
-        textAlign: 'center',
-        fontSize: 11,
-        color: '#BBBBBB',
-        fontWeight: '500',
-        letterSpacing: 0.3,
+        fontWeight: '900',
     },
 })
 

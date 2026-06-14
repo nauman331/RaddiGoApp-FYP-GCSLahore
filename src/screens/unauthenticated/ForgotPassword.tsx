@@ -73,54 +73,54 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
     const inputBorder = (field: string) => focusedField === field ? theme.primary : '#E5E7EB'
 
     const handleSendOTP = async () => {
-        if (!email) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Required', textBody: 'Please enter your email' }); return }
+        if (!email) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Zaroori', textBody: 'Barae meharbani apna email darj karein' }); return }
         try {
             await sendOTP({ email })
-            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Code sent!', textBody: 'Check your email for the OTP' })
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Code bhej diya!', textBody: 'Apne email mein OTP check karein' })
             setStep(2); setTimer(120); setCanResend(false); animateStep()
-        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Failed to send OTP' }) }
+        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'OTP bhejnay mein masla aya' }) }
     }
 
     const handleVerifyOTP = async () => {
-        if (otp.length !== 6) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Invalid OTP', textBody: 'Enter the 6-digit code' }); return }
+        if (otp.length !== 6) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Ghalat OTP', textBody: '6-digit ka code darj karein' }); return }
         try {
             await verifyOTP({ email, otp })
-            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Verified!', textBody: 'Now create your new password' })
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Verified!', textBody: 'Ab apna naya password banayein' })
             setStep(3); animateStep()
-        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Verification failed' }) }
+        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Verification mein masla aya' }) }
     }
 
     const handleResetPassword = async () => {
-        if (!newPassword || !confirmPassword) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Required', textBody: 'Fill in all fields' }); return }
-        if (newPassword !== confirmPassword) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Mismatch', textBody: 'Passwords do not match' }); return }
-        if (newPassword.length < 6) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Too short', textBody: 'Min. 6 characters' }); return }
+        if (!newPassword || !confirmPassword) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Zaroori', textBody: 'Tamam fields pur karein' }); return }
+        if (newPassword !== confirmPassword) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Match nahi hue', textBody: 'Passwords aik dosray se match nahi kar rahe' }); return }
+        if (newPassword.length < 6) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Bohat chhota', textBody: 'Kam az kam 6 characters honay chahiye' }); return }
         try {
             await resetPassword({ email, otp, password: newPassword })
-            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Done!', textBody: 'Password reset successfully' })
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Ho gaya!', textBody: 'Password kamyabi se reset ho gaya' })
             navigation.navigate('SignIn', { role })
-        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Reset failed' }) }
+        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Reset mein masla aya' }) }
     }
 
     const handleResendOTP = async () => {
         if (!canResend) return
         try {
             await sendOTP({ email })
-            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Resent!', textBody: 'New OTP sent to your email' })
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Dobara bhej diya!', textBody: 'Naya OTP apke email mein bhej diya gaya' })
             setTimer(120); setCanResend(false); setOtp('')
-        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Failed to resend' }) }
+        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Dobara bhejnay mein masla aya' }) }
     }
 
     const stepMeta: Record<number, { title: string; subtitle: string }> = {
-        1: { title: 'Forgot Password?', subtitle: "No worries — we'll send you a reset code." },
-        2: { title: 'Check Your Email', subtitle: `We sent a 6-digit code to ${email || 'your email'}.` },
-        3: { title: 'New Password', subtitle: 'Create a strong password for your account.' },
+        1: { title: 'Password Bhool Gaye?', subtitle: "Fikar na karein — hum aapko reset code bhej denge." },
+        2: { title: 'Apna Email Check Karein', subtitle: `Humne 6-digit ka code ${email || 'apke email'} par bhej diya hai.` },
+        3: { title: 'Naya Password', subtitle: 'Apne account ke liye aik mazboot password banayein.' },
     }
 
     const isPending = isSendingOTP || isVerifyingOTP || isResettingPassword
     const ctaLabels: Record<number, [string, string]> = {
-        1: ['Send Code', 'Sending…'],
-        2: ['Verify Code', 'Verifying…'],
-        3: ['Reset Password', 'Resetting…'],
+        1: ['Code Bhejein', 'Bhej rahe hain…'],
+        2: ['Code Verify Karein', 'Verify ho raha hai…'],
+        3: ['Password Reset Karein', 'Reset ho raha hai…'],
     }
     const ctaHandler = [handleSendOTP, handleVerifyOTP, handleResetPassword][step - 1]
 
@@ -196,7 +196,7 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                     <Mail size={18} color={focusedField === 'email' ? theme.primary : '#9CA3AF'} strokeWidth={2} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="you@example.com"
+                                        placeholder="ap@example.com"
                                         placeholderTextColor="#C0C0C0"
                                         keyboardType="email-address"
                                         autoCapitalize="none"
@@ -243,12 +243,12 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                         <TouchableOpacity onPress={handleResendOTP} disabled={isSendingOTP} style={styles.resendBtn}>
                                             <RotateCcw size={14} color={theme.primary} strokeWidth={2.5} />
                                             <Text style={[styles.resendText, { color: theme.primary }]}>
-                                                {isSendingOTP ? 'Sending…' : 'Resend Code'}
+                                                {isSendingOTP ? 'Bhej rahe hain…' : 'Dobara Code Bhejein'}
                                             </Text>
                                         </TouchableOpacity>
                                     ) : (
                                         <View style={styles.timerWrap}>
-                                            <Text style={styles.timerLabel}>Resend in </Text>
+                                            <Text style={styles.timerLabel}>Dobara bhejein </Text>
                                             <View style={[styles.timerBadge, { backgroundColor: theme.light }]}>
                                                 <Text style={[styles.timerCount, { color: theme.primary }]}>{fmt(timer)}</Text>
                                             </View>
@@ -262,12 +262,12 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                         {step === 3 && (
                             <>
                                 <View style={styles.fieldGroup}>
-                                    <Text style={styles.label}>New Password</Text>
+                                    <Text style={styles.label}>Naya Password</Text>
                                     <View style={[styles.inputWrap, { borderColor: inputBorder('newpw') }]}>
                                         <Lock size={18} color={focusedField === 'newpw' ? theme.primary : '#9CA3AF'} strokeWidth={2} />
                                         <TextInput
                                             style={styles.input}
-                                            placeholder="Min. 6 characters"
+                                            placeholder="Kam az kam 6 characters"
                                             placeholderTextColor="#C0C0C0"
                                             secureTextEntry={!showPassword}
                                             value={newPassword}
@@ -281,7 +281,7 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                     </View>
                                 </View>
                                 <View style={styles.fieldGroup}>
-                                    <Text style={styles.label}>Confirm Password</Text>
+                                    <Text style={styles.label}>Password Confirm Karein</Text>
                                     <View style={[
                                         styles.inputWrap,
                                         { borderColor: confirmPassword && confirmPassword !== newPassword ? '#EF4444' : inputBorder('confirmpw') }
@@ -289,7 +289,7 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                         <Lock size={18} color={focusedField === 'confirmpw' ? theme.primary : '#9CA3AF'} strokeWidth={2} />
                                         <TextInput
                                             style={styles.input}
-                                            placeholder="Repeat new password"
+                                            placeholder="Password dobara likhein"
                                             placeholderTextColor="#C0C0C0"
                                             secureTextEntry={!showConfirm}
                                             value={confirmPassword}
@@ -302,7 +302,7 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                         </TouchableOpacity>
                                     </View>
                                     {confirmPassword.length > 0 && confirmPassword !== newPassword && (
-                                        <Text style={styles.errorHint}>Passwords don't match</Text>
+                                        <Text style={styles.errorHint}>Passwords match nahi kar rahe</Text>
                                     )}
                                 </View>
                             </>
@@ -328,9 +328,9 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
 
                     {/* Bottom nudge */}
                     <View style={styles.bottomRow}>
-                        <Text style={styles.bottomText}>Remember your password? </Text>
+                        <Text style={styles.bottomText}>Password yaad aa gaya? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignIn', { role })}>
-                            <Text style={[styles.bottomLink, { color: theme.primary }]}>Sign In</Text>
+                            <Text style={[styles.bottomLink, { color: theme.primary }]}>Sign In karein</Text>
                         </TouchableOpacity>
                     </View>
 

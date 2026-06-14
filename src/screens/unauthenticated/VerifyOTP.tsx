@@ -51,7 +51,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
 
     const handleVerify = async () => {
         if (otp.length !== 6) {
-            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Invalid OTP', textBody: 'Enter the 6-digit code' })
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Ghalat OTP', textBody: '6-digit ka code darj karein' })
             return
         }
         try {
@@ -60,7 +60,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
             Animated.spring(successScale, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }).start()
             setTimeout(() => navigation.navigate('SignIn', { role }), 1600)
         } catch (e: any) {
-            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Verification failed' })
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Verification mein masla aya' })
         }
     }
 
@@ -68,10 +68,10 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
         if (!canResend) return
         try {
             await resendOTP({ email })
-            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Resent!', textBody: 'New code sent to your email' })
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Dobara bhej diya!', textBody: 'Naya code apke email par bhej diya gaya' })
             setTimer(120); setCanResend(false); setOtp('')
         } catch (e: any) {
-            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Failed to resend' })
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Dobara bhejnay mein masla aya' })
         }
     }
 
@@ -100,9 +100,9 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                     {/* Header */}
                     <View style={styles.headerRow}>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.greeting}>Almost there!</Text>
-                            <Text style={[styles.title, { color: theme.primary }]}>Verify Email</Text>
-                            <Text style={styles.subtitle}>Confirm it's you before we let you in.</Text>
+                            <Text style={styles.greeting}>Bas thora sa aur!</Text>
+                            <Text style={[styles.title, { color: theme.primary }]}>Email Verify Karein</Text>
+                            <Text style={styles.subtitle}>Andar anay se pehle confirm karein ke yeh aap hain.</Text>
                         </View>
                         <View style={[styles.logoWrap, { borderColor: theme.primary + '30' }]}>
                             <Image source={LogoImage} style={styles.logo} resizeMode="contain" />
@@ -115,7 +115,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                             <Mail size={20} color={theme.primary} strokeWidth={2} />
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={[styles.emailCardLabel, { color: theme.pillText }]}>Code sent to</Text>
+                            <Text style={[styles.emailCardLabel, { color: theme.pillText }]}>Code bhej diya gaya</Text>
                             <Text style={[styles.emailCardValue, { color: theme.primary }]}>{maskedEmail}</Text>
                         </View>
                     </View>
@@ -130,11 +130,11 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                                     <CheckCircle2 size={48} color={theme.primary} strokeWidth={2} />
                                 </View>
                                 <Text style={[styles.successTitle, { color: theme.primary }]}>Verified!</Text>
-                                <Text style={styles.successSub}>Taking you to Sign In…</Text>
+                                <Text style={styles.successSub}>Apko Sign In par le ja rahe hain…</Text>
                             </Animated.View>
                         ) : (
                             <>
-                                <Text style={styles.otpHint}>Enter the 6-digit code below</Text>
+                                <Text style={styles.otpHint}>Neechay 6-digit ka code darj karein</Text>
 
                                 {/* OTP visual boxes */}
                                 <View style={styles.otpRow}>
@@ -171,12 +171,12 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                                         <TouchableOpacity onPress={handleResend} disabled={isResending} style={styles.resendBtn}>
                                             <RotateCcw size={14} color={theme.primary} strokeWidth={2.5} />
                                             <Text style={[styles.resendText, { color: theme.primary }]}>
-                                                {isResending ? 'Sending…' : 'Resend Code'}
+                                                {isResending ? 'Bhej rahe hain…' : 'Dobara Code Bhejein'}
                                             </Text>
                                         </TouchableOpacity>
                                     ) : (
                                         <View style={styles.timerWrap}>
-                                            <Text style={styles.timerLabel}>Resend available in </Text>
+                                            <Text style={styles.timerLabel}>Dobara code bhejein </Text>
                                             <View style={[styles.timerBadge, { backgroundColor: theme.light }]}>
                                                 <Text style={[styles.timerCount, { color: theme.primary }]}>{fmt(timer)}</Text>
                                             </View>
@@ -195,7 +195,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                                     ]}
                                 >
                                     <Text style={styles.primaryBtnText}>
-                                        {isVerifying ? 'Verifying…' : 'Confirm Code'}
+                                        {isVerifying ? 'Verify ho raha hai…' : 'Code Confirm Karein'}
                                     </Text>
                                     {!isVerifying && (
                                         <View style={[styles.arrowCircle, { backgroundColor: otp.length === 6 ? theme.mid : '#9CA3AF' }]}>
@@ -209,9 +209,9 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
 
                     {/* Bottom */}
                     <View style={styles.bottomRow}>
-                        <Text style={styles.bottomText}>Wrong email? </Text>
+                        <Text style={styles.bottomText}>Ghalat email? </Text>
                         <TouchableOpacity onPress={() => navigation.goBack()}>
-                            <Text style={[styles.bottomLink, { color: theme.primary }]}>Go Back</Text>
+                            <Text style={[styles.bottomLink, { color: theme.primary }]}>Wapis Jayein</Text>
                         </TouchableOpacity>
                     </View>
 
