@@ -4,171 +4,166 @@ import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
-import { ArrowRight, Activity, Wallet, Clock, HelpCircle, Settings, MapPin, Gift } from 'lucide-react-native'
+import { ArrowRight, Wallet, Clock, HeadphonesIcon, Settings, MapPin, ChevronRight, ShieldCheck, Zap } from 'lucide-react-native'
 
 const Home: React.FC = ({ navigation }: any) => {
-    // Assuming you have a ride slice managing the current active order status
-    const { isConnected } = useSelector((state: RootState) => state.socket);
-    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
-    // MOCK: Replace with actual active ride state from your Redux store
-    const activeRideStatus = 'idle'; // e.g., 'idle', 'pending', 'on_way'
+    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string, username?: string } };
+    
+    const activeRideStatus = 'idle'; 
     
     const role = userdata?.role || 'customer'; 
-    const iscollector = role === 'collector';
+    const isCollector = role === 'collector'; 
     
-    // Theme Colors
-    const primaryColorHex = iscollector ? '#d97706' : '#059669'; 
-    const primaryLightHex = iscollector ? '#fef3c7' : '#dcfce7'; 
-    const secondaryLightHex = iscollector ? '#dcfce7' : '#fef3c7'; 
+    const primaryColor = isCollector ? '#d97706' : '#059669'; 
+    const primaryLight = isCollector ? '#fffbeb' : '#ecfdf5'; 
 
-    // Quick Actions Data
     const quickActions = [
         { id: 1, label: 'Wallet', icon: Wallet, route: 'Wallet' },
         { id: 2, label: 'History', icon: Clock, route: 'Activity' },
-        { id: 3, label: 'Support', icon: HelpCircle, route: 'Support' },
+        { id: 3, label: 'Help', icon: HeadphonesIcon, route: 'Support' },
         { id: 4, label: 'Settings', icon: Settings, route: 'Profile' },
     ];
 
     return (
-        <View className='flex-1 bg-gray-50'>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-            <Header />
+        <View className='flex-1 bg-[#f8fafc]'>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
             
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+            <View className="bg-white shadow-sm z-20 pb-4 rounded-b-[32px]">
+                <Header />
+                <View className="px-6 mt-1 flex-row items-center justify-between">
+                    <View>
+                        <Text className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-0.5">Assalam-o-Alaikum,</Text>
+                        <Text className="text-gray-900 font-black text-2xl">{userdata?.username || 'User'}</Text>
+                    </View>
+                    <View className="bg-emerald-50 flex-row items-center px-3 py-1.5 rounded-full border border-emerald-100">
+                        <ShieldCheck size={14} color="#059669" />
+                        <Text className="text-emerald-700 font-bold text-[11px] ml-1 uppercase">Verified</Text>
+                    </View>
+                </View>
+            </View>
+            
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120, paddingTop: 20 }}>
                 
-                {/* 1. DYNAMIC ACTIVE RIDE BANNER */}
+                <View className="px-5 mb-6 mt-2">
+                    <TouchableOpacity 
+                        activeOpacity={0.9} 
+                        className="w-full bg-white rounded-[28px] p-6 shadow-sm border border-gray-100 flex-row items-center justify-between"
+                    >
+                        <View>
+                            <Text className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-1">
+                                {isCollector ? 'Total Savings' : 'Current Balance'}
+                            </Text>
+                            <View className="flex-row items-end">
+                                <Text className="text-gray-400 font-bold text-lg mr-1.5 mb-1">Rs</Text>
+                                <Text className="text-gray-900 font-black text-4xl tracking-tight">4,250</Text>
+                            </View>
+                            
+                            <View className="flex-row items-center mt-3">
+                                <View className="bg-gray-100 px-2 py-1 rounded-md flex-row items-center mr-2">
+                                     <Text className="text-gray-700 font-bold text-[10px] uppercase tracking-wide">
+                                         12 {isCollector ? 'Pickups' : 'Orders'}
+                                     </Text>
+                                </View>
+                                <Text className="text-gray-400 font-semibold text-xs">This month</Text>
+                            </View>
+                        </View>
+
+                        <View className="bg-gray-50 p-4 rounded-full border border-gray-100">
+                            <Wallet size={28} color={primaryColor} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+
                 {activeRideStatus !== 'idle' && (
                     <TouchableOpacity 
-                        className='mx-5 mt-5 bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex-row items-center'
+                        className='mx-5 mb-6 bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 flex-row items-center'
                         onPress={() => navigation.navigate('Ride')}
+                        activeOpacity={0.9}
                     >
-                        <View className='bg-blue-50 p-3 rounded-full mr-4'>
-                            <MapPin size={24} color="#3b82f6" />
+                        <View className='p-3.5 rounded-full mr-4' style={{ backgroundColor: primaryLight }}>
+                            <MapPin size={24} color={primaryColor} />
                         </View>
                         <View className='flex-1'>
-                            <Text className='text-sm text-gray-500 font-bold uppercase tracking-wider mb-0.5'>Current Order</Text>
-                            <Text className='text-gray-900 font-extrabold text-lg'>Collector is on the way</Text>
-                            <Text className='text-gray-500 text-xs mt-1'>Arriving in ~5 mins</Text>
+                            <Text className='text-gray-900 font-black text-lg leading-tight mb-0.5'>Rider is on the way</Text>
+                            <Text className='text-gray-500 font-bold text-xs'>Arriving in 5 mins • Honda CD70</Text>
                         </View>
-                        <ArrowRight size={20} color="#9ca3af" />
+                        <View className="bg-gray-50 p-2 rounded-full">
+                            <ArrowRight size={20} color="#9ca3af" strokeWidth={2.5} />
+                        </View>
                     </TouchableOpacity>
                 )}
 
-                {/* 2. STATS GRID */}
-                <View className='flex-row justify-between mt-5 px-5'>
-                    <View className='rounded-3xl p-4 flex-1 mr-2 justify-between' style={{ backgroundColor: primaryLightHex, height: 110 }}>
-                        <View className='flex-row justify-between items-start'>
-                            <Text className='text-sm font-bold text-gray-800 w-2/3 leading-tight'>
-                                {iscollector ? 'Total Requests' : 'Total Orders'}
-                            </Text>
-                            <View className='bg-white/60 p-1.5 rounded-full'>
-                                <Activity size={16} color={primaryColorHex} />
+                <View className="px-5 mb-8">
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Ride')}
+                        activeOpacity={0.9}
+                        className="w-full bg-white rounded-[28px] p-2 flex-row items-center shadow-md border border-gray-100"
+                    >
+                        <View className="flex-1 pl-6 py-4">
+                            <View className="flex-row items-center mb-1.5">
+                                <Zap size={16} color={primaryColor} className="mr-1.5" />
+                                <Text className="text-gray-500 font-bold text-[11px] uppercase tracking-widest">Quick Action</Text>
                             </View>
-                        </View>
-                        <View>
-                            <Text className='text-2xl font-black text-gray-900'>12</Text>
-                            <Text className='text-xs text-gray-600 font-medium mt-0.5'>This month</Text>
-                        </View>
-                    </View>
-
-                    <View className='rounded-3xl p-4 flex-1 ml-2 justify-between' style={{ backgroundColor: secondaryLightHex, height: 110 }}>
-                        <View className='flex-row justify-between items-start'>
-                            <Text className='text-sm font-bold text-gray-800 w-2/3 leading-tight'>
-                                {iscollector ? 'Saved Money' : 'Earnings'}
+                            <Text className="text-gray-900 font-black text-2xl">
+                                {isCollector ? "Request Pickup" : "Find Raddi Orders"}
                             </Text>
-                            <View className='bg-white/60 p-1.5 rounded-full'>
-                                <Wallet size={16} color={iscollector ? '#059669' : '#d97706'} />
-                            </View>
                         </View>
-                        <View>
-                            <Text className='text-2xl font-black text-gray-900'>Rs 4,200</Text>
-                            <Text className='text-xs text-gray-600 font-medium mt-0.5'>This month</Text>
+                        
+                        <View className={`w-20 h-24 rounded-[22px] items-center justify-center shadow-inner ${isCollector ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                            <ArrowRight size={32} color={primaryColor} strokeWidth={2.5} />
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
-                {/* 3. MAIN ACTION CTA */}
-                <TouchableOpacity
-                    className='rounded-3xl p-5 mx-5 mt-5 flex-row justify-between items-center shadow-sm'
-                    style={{ backgroundColor: primaryColorHex, opacity: isConnected ? 1 : 0.7 }}
-                    onPress={() => navigation.navigate('Ride')}
-                    activeOpacity={0.8}
-                >
-                    <View>
-                        <Text className='text-white/80 text-sm font-medium mb-1'>
-                            {isConnected ? 'Ready to go?' : 'Connecting to server...'}
-                        </Text>
-                        <Text className='text-white font-extrabold text-xl'>
-                            {isConnected 
-                                ? (iscollector ? "Open Collector Dashboard" : "Request a Pickup Now") 
-                                : "Connecting..."}
-                        </Text>
-                    </View>
-                    <View className='bg-white/20 p-3 rounded-full'>
-                        <ArrowRight size={24} color="#ffffff" />
-                    </View>
-                </TouchableOpacity>
-
-                {/* 4. QUICK ACTIONS ROW */}
-                <View className='flex-row justify-between mt-6 px-7'>
+                <View className="flex-row justify-between gap-2 px-5 mb-8">
                     {quickActions.map((action) => {
                         const Icon = action.icon;
                         return (
                             <TouchableOpacity 
                                 key={action.id} 
-                                className='items-center'
+                                activeOpacity={0.7}
+                                className="flex-1 items-center"
                                 onPress={() => {
-                                    // Make sure these routes exist in your navigator, or fallback to Home
                                     if(action.route === 'Activity' || action.route === 'Profile') {
                                         navigation.navigate(action.route);
                                     }
                                 }}
                             >
-                                <View className='w-14 h-14 bg-white rounded-full items-center justify-center shadow-sm border border-gray-100 mb-2'>
-                                    <Icon size={22} color="#4b5563" strokeWidth={2} />
+                                <View className="w-16 h-16 bg-white rounded-[20px] items-center justify-center shadow-sm border border-gray-100 mb-2">
+                                    <Icon size={24} color="#4b5563" strokeWidth={1.5} />
                                 </View>
-                                <Text className='text-xs font-semibold text-gray-600'>{action.label}</Text>
+                                <Text className="text-[11px] font-extrabold text-gray-700">{action.label}</Text>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
 
-                {/* 5. PROMO / INFO BANNER */}
-                <View className='mx-5 mt-8 bg-blue-50 rounded-3xl p-5 flex-row items-center justify-between border border-blue-100'>
-                    <View className='flex-1 pr-4'>
-                        <Text className='text-blue-900 font-extrabold text-base mb-1'>Invite Friends</Text>
-                        <Text className='text-blue-700 text-xs leading-relaxed'>
-                            Earn Rs 500 in your wallet for every friend who completes their first pickup.
+                <View className='px-5'>
+                    <View className='flex-row justify-between items-center mb-4 px-1'>
+                        <Text className='font-black text-gray-900 text-xl tracking-tight'>
+                            {isCollector ? 'Recent Requests' : 'Recent Orders'}
                         </Text>
-                    </View>
-                    <View className='bg-blue-100 p-3 rounded-full'>
-                        <Gift size={28} color="#2563eb" />
-                    </View>
-                </View>
-
-                {/* 6. RECENT ACTIVITY SECTION */}
-                <View className='mt-8 px-5'>
-                    <View className='flex-row justify-between items-end mb-4'>
-                        <Text className='font-extrabold text-gray-900 text-lg'>
-                            {iscollector ? 'Recent Requests' : 'Recent Orders'}
-                        </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Activity')}>
-                            <Text className='font-bold text-sm' style={{ color: primaryColorHex }}>See All</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Activity')} className="flex-row items-center">
+                            <Text className='font-extrabold text-sm mr-1' style={{ color: primaryColor }}>See All</Text>
+                            <ChevronRight size={16} color={primaryColor} strokeWidth={2.5} />
                         </TouchableOpacity>
                     </View>
 
-                    <View className='bg-white rounded-3xl p-8 w-full items-center shadow-sm border border-gray-100'>
-                        <Image source={EmptyPic} className='w-32 h-32 mb-4 opacity-80' resizeMode="contain" />
-                        <Text className='text-gray-800 text-lg font-bold text-center'>
-                            {iscollector ? 'No Requests Yet' : 'No Orders Yet'}
+                    <View className='bg-white rounded-[28px] p-8 w-full items-center border border-gray-100 shadow-sm'>
+                        <View className="bg-gray-50 w-20 h-20 rounded-full items-center justify-center mb-4">
+                            <Image source={EmptyPic} className='w-12 h-12 opacity-40' resizeMode="contain" />
+                        </View>
+                        <Text className='text-gray-900 text-lg font-black text-center mb-1.5'>
+                            No activity yet
                         </Text>
-                        <Text className='text-gray-500 text-sm mt-2 text-center leading-relaxed px-4'>
-                            {iscollector
-                                ? 'When you create pickup requests, they will appear right here.'
-                                : 'When you receive active orders, you will see them here.'}
+                        <Text className='text-gray-500 text-sm text-center leading-relaxed font-medium px-2'>
+                            {isCollector
+                                ? "Schedule a pickup to see your transaction history here."
+                                : "Complete an order to start tracking your daily earnings."}
                         </Text>
                     </View>
                 </View>
+
             </ScrollView>
         </View>
     )
