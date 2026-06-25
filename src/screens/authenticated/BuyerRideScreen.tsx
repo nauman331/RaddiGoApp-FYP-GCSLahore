@@ -9,7 +9,6 @@ import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
 import { MapPin, Navigation, CheckCircle, XCircle, Package, User, DollarSign, FileText, Smartphone, Boxes, Wine, Layers, Truck } from 'lucide-react-native'
 
-// Fallback coordinates (Lahore) in case GPS times out
 const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
 
 interface IncomingPickupRequest {
@@ -37,33 +36,37 @@ const CollectorRideScreen = () => {
     const [showRequestModal, setShowRequestModal] = useState(false);
 
     const categories: { id: RaddiItem['category']; label: string; icon: any; color: string }[] = [
-        { id: 'paper', label: 'Paper', icon: FileText, color: '#3b82f6' },
+        { id: 'paper', label: 'Kaghaz (Paper)', icon: FileText, color: '#3b82f6' },
         { id: 'plastic', label: 'Plastic', icon: Layers, color: '#f59e0b' },
-        { id: 'metal', label: 'Metal', icon: Package, color: '#6b7280' },
+        { id: 'metal', label: 'Loha / Metal', icon: Package, color: '#64748b' },
         { id: 'electronics', label: 'Electronics', icon: Smartphone, color: '#8b5cf6' },
-        { id: 'cardboard', label: 'Cardboard', icon: Boxes, color: '#d97706' },
-        { id: 'glass', label: 'Glass', icon: Wine, color: '#10b981' },
-        { id: 'other', label: 'Other', icon: MapPin, color: '#ef4444' },
+        { id: 'cardboard', label: 'Gatta (Cardboard)', icon: Boxes, color: '#d97706' },
+        { id: 'glass', label: 'Sheesha (Glass)', icon: Wine, color: '#10b981' },
+        { id: 'other', label: 'Deegar (Other)', icon: MapPin, color: '#ef4444' },
     ];
 
     useEffect(() => {
-        const locationHandler = async () => {
+        const fetchLocationFast = async () => {
             try {
                 setLocating(true);
                 const granted = await getLocationPermission();
                 if (!granted) {
-                    Toast.show({ type: ALERT_TYPE.DANGER, title: 'Permission Denied', textBody: 'Location permission is required.' });
-                    // Provide fallback so the screen doesn't break
+                    Toast.show({ type: ALERT_TYPE.WARNING, title: 'Permission Chahiye', textBody: 'Location ki ijazat zaroori hai.' });
                     setCurrentLocation(FALLBACK_LOCATION);
                     dispatch(updatecollectorLocation(FALLBACK_LOCATION));
                     return;
                 }
-                const position = await getCurrentLocation();
-                const { latitude, longitude } = (position as { coords: { latitude: number; longitude: number } }).coords;
+
+                const locationPromise = getCurrentLocation();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+                
+                const position = await Promise.race([locationPromise, timeoutPromise]) as any;
+                const { latitude, longitude } = position.coords;
                 const location = { latitude, longitude };
+                
                 setCurrentLocation(location);
                 dispatch(updatecollectorLocation(location));
-                
+
                 if (isConnected && userdata?.id) {
                     socketService.emit('driverLocationUpdate', {
                         driverId: Number(userdata.id) || userdata.id,
@@ -72,21 +75,15 @@ const CollectorRideScreen = () => {
                         orderId: rideState.orderId,
                     });
                 }
-            } catch (error) {
-                console.error('Location error:', error);
-                Toast.show({ 
-                    type: ALERT_TYPE.WARNING, 
-                    title: 'GPS Timeout', 
-                    textBody: 'Could not get exact location. Using default city center.' 
-                });
-                // Graceful fallback on timeout
+            } catch (error: any) {
+                console.log('Fast Location Fallback Triggered');
                 setCurrentLocation(FALLBACK_LOCATION);
                 dispatch(updatecollectorLocation(FALLBACK_LOCATION));
             } finally {
                 setLocating(false);
             }
         };
-        locationHandler();
+        fetchLocationFast();
     }, []);
 
     useEffect(() => {
@@ -110,13 +107,13 @@ const CollectorRideScreen = () => {
         socketService.on('newRideOrder', (data: any) => {
             setIncomingRequest(data);
             setShowRequestModal(true);
-            Toast.show({ type: ALERT_TYPE.INFO, title: 'New Pickup Request!', textBody: `${data.customerName} wants you to pickup raddi` });
+            Toast.show({ type: ALERT_TYPE.INFO, title: 'Nayi Request Aagayi!', textBody: `${data.customerName} ko raddi bechni hai.` });
         });
 
         socketService.on('requestCancelled', () => {
             setShowRequestModal(false);
             setIncomingRequest(null);
-            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Request Cancelled', textBody: 'The customer cancelled the pickup request.' });
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Request Cancel Ho Gayi', textBody: 'Customer ne request cancel kar di hai.' });
         });
 
         return () => {
@@ -137,7 +134,7 @@ const CollectorRideScreen = () => {
         }));
 
         setShowRequestModal(false);
-        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Accepted!', textBody: `Navigating to ${incomingRequest.customerName}'s location` });
+        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Qabool Kar Li!', textBody: `${incomingRequest.customerName} ki taraf rasta dekhein` });
 
         if (isConnected) {
             socketService.emit('acceptRaddiOrder', {
@@ -155,7 +152,7 @@ const CollectorRideScreen = () => {
     const handleRejectRequest = () => {
         setShowRequestModal(false);
         setIncomingRequest(null);
-        Toast.show({ type: ALERT_TYPE.WARNING, title: 'Request Rejected', textBody: 'You rejected the pickup request.' });
+        Toast.show({ type: ALERT_TYPE.WARNING, title: 'Inkaar Kar Diya', textBody: 'Aapne request reject kar di hai.' });
 
         if (isConnected && incomingRequest) {
             socketService.emit('rejectRaddiOrder', {
@@ -168,7 +165,7 @@ const CollectorRideScreen = () => {
 
     const handleStartNavigation = () => {
         if (!rideState.customerLocation) {
-            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: 'Customer location not available' });
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Masla Hai', textBody: 'Customer ki location nahi mil rahi' });
             return;
         }
         const { latitude, longitude } = rideState.customerLocation;
@@ -179,7 +176,7 @@ const CollectorRideScreen = () => {
 
         if (url) {
             Linking.openURL(url).catch(() => {
-                Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: 'Could not open maps application' });
+                Toast.show({ type: ALERT_TYPE.DANGER, title: 'Masla Hai', textBody: 'Maps app open nahi ho raha' });
             });
         }
     };
@@ -187,13 +184,13 @@ const CollectorRideScreen = () => {
     const handleStatusUpdate = (newStatus: string) => {
         dispatch(setRideStatus(newStatus as any));
         const statusMessages: { [key: string]: string } = {
-            on_way: 'On the way to pickup location',
-            arrived: 'Arrived at pickup location',
-            picked_up: 'Items picked up successfully',
-            completed: 'Pickup completed!',
+            on_way: 'Aap raste mein hain',
+            arrived: 'Aap pohnch gaye hain',
+            picked_up: 'Saman utha liya gaya hai',
+            completed: 'Pickup mukammal ho gaya!',
         };
 
-        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Status Updated', textBody: statusMessages[newStatus] || 'Status updated' });
+        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Status Update', textBody: statusMessages[newStatus] || 'Status badal gaya' });
 
         if (newStatus === 'completed') {
             setTimeout(() => { dispatch(resetRide()); }, 2000);
@@ -206,20 +203,20 @@ const CollectorRideScreen = () => {
 
     const getStatusInfo = () => {
         switch (rideState.status) {
-            case 'idle': return { text: 'Waiting for requests...', color: '#d97706', bgColor: '#fef3c7', border: '#fde68a' };
-            case 'accepted': return { text: 'Request Accepted', color: '#d97706', bgColor: '#fef3c7', border: '#fde68a' };
-            case 'on_way': return { text: 'On the way', color: '#3b82f6', bgColor: '#eff6ff', border: '#bfdbfe' };
-            case 'arrived': return { text: 'Arrived at pickup', color: '#8b5cf6', bgColor: '#faf5ff', border: '#e9d5ff' };
-            case 'picked_up': return { text: 'Items picked up', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
-            case 'completed': return { text: 'Completed', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
-            default: return { text: 'Waiting for requests...', color: '#d97706', bgColor: '#fef3c7', border: '#fde68a' };
+            case 'idle': return { text: 'Nayi requests ka intezar...', color: '#d97706', bgColor: '#fffbeb', border: '#fde68a' };
+            case 'accepted': return { text: 'Request Qabool Ho Gayi', color: '#d97706', bgColor: '#fffbeb', border: '#fde68a' };
+            case 'on_way': return { text: 'Raste Mein Hain', color: '#2563eb', bgColor: '#eff6ff', border: '#bfdbfe' };
+            case 'arrived': return { text: 'Pohnch Gaye', color: '#7c3aed', bgColor: '#faf5ff', border: '#e9d5ff' };
+            case 'picked_up': return { text: 'Saman Utha Liya', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
+            case 'completed': return { text: 'Mukammal', color: '#059669', bgColor: '#ecfdf5', border: '#a7f3d0' };
+            default: return { text: 'Nayi requests ka intezar...', color: '#d97706', bgColor: '#fffbeb', border: '#fde68a' };
         }
     };
 
     const statusInfo = getStatusInfo();
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+        <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
             <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
 
             <View style={{ flex: 1, position: 'relative' }}>
@@ -230,46 +227,49 @@ const CollectorRideScreen = () => {
                 />
 
                 {locating && (
-                    <View className="absolute inset-0 justify-center items-center bg-black/30 z-50">
-                        <View className="bg-white p-5 rounded-3xl items-center shadow-2xl">
+                    <View className="absolute inset-0 justify-center items-center bg-black/20 z-50 backdrop-blur-sm">
+                        <View className="bg-white p-6 rounded-[28px] items-center shadow-2xl border border-[#f1f5f9]">
                             <ActivityIndicator size="large" color="#d97706" />
-                            <Text className="text-gray-800 mt-3 font-bold">Locating...</Text>
+                            <Text className="text-gray-900 mt-4 font-black text-lg tracking-tight">Location mil rahi hai...</Text>
                         </View>
                     </View>
                 )}
 
                 <View 
-                    className="absolute top-6 self-center px-6 py-2.5 rounded-full shadow-sm z-40 border" 
+                    className="absolute top-12 self-center px-6 py-3 rounded-full shadow-md z-40 border" 
                     style={{ backgroundColor: statusInfo.bgColor, borderColor: statusInfo.border }}
                 >
-                    <Text className="font-extrabold text-[13px] uppercase tracking-wider" style={{ color: statusInfo.color }}>
+                    <Text className="font-black text-xs uppercase tracking-widest" style={{ color: statusInfo.color }}>
                         {statusInfo.text}
                     </Text>
                 </View>
 
                 {rideState.status !== 'idle' && rideState.customerName && (
-                    <View className="absolute top-20 mx-5 self-center bg-white p-5 rounded-3xl shadow-xl z-40 w-[90%] border border-gray-100">
-                        <View className="flex-row items-center justify-between mb-3 border-b border-gray-50 pb-3">
+                    <View className="absolute top-28 mx-5 self-center bg-white p-6 rounded-[32px] shadow-xl shadow-amber-900/10 z-40 w-[90%] border border-[#f1f5f9]">
+                        <View className="flex-row items-center justify-between mb-4 border-b border-[#f1f5f9] pb-4">
                             <View className="flex-row items-center">
-                                <View className="bg-amber-50 p-2 rounded-full mr-3">
-                                    <User color="#d97706" size={20} />
+                                <View className="bg-[#fffbeb] p-3 rounded-[16px] mr-3">
+                                    <User color="#d97706" size={20} strokeWidth={2.5} />
                                 </View>
-                                <Text className="font-extrabold text-gray-900 text-lg">
-                                    {rideState.customerName}
-                                </Text>
+                                <View>
+                                    <Text className="text-gray-400 font-extrabold text-[10px] uppercase tracking-widest mb-0.5">Customer</Text>
+                                    <Text className="font-black text-gray-900 text-lg tracking-tight">
+                                        {rideState.customerName}
+                                    </Text>
+                                </View>
                             </View>
                             {rideState.estimatedTime && (
-                                <View className="bg-amber-100 px-3 py-1.5 rounded-full">
-                                    <Text className="text-amber-700 text-xs font-bold tracking-wide">
+                                <View className="bg-[#fffbeb] px-3 py-1.5 rounded-[12px] border border-[#fde68a]">
+                                    <Text className="text-[#d97706] text-xs font-black tracking-wide">
                                         ~{rideState.estimatedTime} min
                                     </Text>
                                 </View>
                             )}
                         </View>
                         {rideState.pickupAddress && (
-                            <View className="flex-row items-center mt-1 pr-4">
-                                <MapPin color="#9ca3af" size={16} />
-                                <Text className="ml-2 text-sm text-gray-600 font-medium" numberOfLines={2}>
+                            <View className="flex-row items-start mt-1 pr-2">
+                                <MapPin color="#94a3b8" size={16} strokeWidth={2.5} className="mt-0.5" />
+                                <Text className="ml-2.5 text-sm text-gray-600 font-bold leading-relaxed flex-1" numberOfLines={2}>
                                     {rideState.pickupAddress}
                                 </Text>
                             </View>
@@ -281,54 +281,54 @@ const CollectorRideScreen = () => {
                     {rideState.status === 'accepted' && (
                         <View className="flex-row gap-3">
                             <TouchableOpacity
-                                activeOpacity={0.8}
-                                className="flex-1 flex-row items-center justify-center bg-gray-900 py-4 rounded-2xl shadow-lg"
+                                activeOpacity={0.85}
+                                className="flex-1 flex-row items-center justify-center bg-gray-900 py-4 rounded-[24px] shadow-lg"
                                 onPress={handleStartNavigation}
                             >
-                                <Navigation color="#fff" size={18} strokeWidth={2.5} />
-                                <Text className="font-bold text-white ml-2">Navigate</Text>
+                                <Navigation color="#ffffff" size={18} strokeWidth={2.5} />
+                                <Text className="font-black text-white ml-2.5 text-base">Rasta Dekhein</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                activeOpacity={0.8}
-                                className="flex-1 flex-row items-center justify-center bg-amber-600 py-4 rounded-2xl shadow-lg"
+                                activeOpacity={0.85}
+                                className="flex-1 flex-row items-center justify-center bg-[#d97706] py-4 rounded-[24px] shadow-lg shadow-amber-600/30"
                                 onPress={() => handleStatusUpdate('on_way')}
                             >
-                                <Truck color="#fff" size={18} strokeWidth={2.5} />
-                                <Text className="font-bold text-white ml-2">On My Way</Text>
+                                <Truck color="#ffffff" size={18} strokeWidth={2.5} />
+                                <Text className="font-black text-white ml-2.5 text-base">Raste Mein Hoon</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {rideState.status === 'on_way' && (
                         <TouchableOpacity
-                            activeOpacity={0.8}
-                            className="w-full flex-row items-center justify-center bg-amber-600 py-4 rounded-2xl shadow-lg"
+                            activeOpacity={0.85}
+                            className="w-full flex-row items-center justify-center bg-[#d97706] py-4 rounded-[24px] shadow-lg shadow-amber-600/30"
                             onPress={() => handleStatusUpdate('arrived')}
                         >
-                            <MapPin color="#fff" size={20} strokeWidth={2.5} />
-                            <Text className="font-bold text-white text-base ml-2">I've Arrived</Text>
+                            <MapPin color="#ffffff" size={20} strokeWidth={2.5} />
+                            <Text className="font-black text-white text-lg ml-2.5">Main Pohnch Gaya</Text>
                         </TouchableOpacity>
                     )}
 
                     {rideState.status === 'arrived' && (
                         <TouchableOpacity
-                            activeOpacity={0.8}
-                            className="w-full flex-row items-center justify-center bg-amber-600 py-4 rounded-2xl shadow-lg"
+                            activeOpacity={0.85}
+                            className="w-full flex-row items-center justify-center bg-[#d97706] py-4 rounded-[24px] shadow-lg shadow-amber-600/30"
                             onPress={() => handleStatusUpdate('picked_up')}
                         >
-                            <Package color="#fff" size={20} strokeWidth={2.5} />
-                            <Text className="font-bold text-white text-base ml-2">Items Picked Up</Text>
+                            <Package color="#ffffff" size={20} strokeWidth={2.5} />
+                            <Text className="font-black text-white text-lg ml-2.5">Saman Utha Liya</Text>
                         </TouchableOpacity>
                     )}
 
                     {rideState.status === 'picked_up' && (
                         <TouchableOpacity
-                            activeOpacity={0.8}
-                            className="w-full flex-row items-center justify-center bg-emerald-600 py-4 rounded-2xl shadow-lg"
+                            activeOpacity={0.85}
+                            className="w-full flex-row items-center justify-center bg-[#059669] py-4 rounded-[24px] shadow-lg shadow-emerald-600/30"
                             onPress={() => handleStatusUpdate('completed')}
                         >
-                            <CheckCircle color="#fff" size={20} strokeWidth={2.5} />
-                            <Text className="font-bold text-white text-base ml-2">Complete Pickup</Text>
+                            <CheckCircle color="#ffffff" size={20} strokeWidth={2.5} />
+                            <Text className="font-black text-white text-lg ml-2.5">Pickup Pura Karein</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -341,58 +341,62 @@ const CollectorRideScreen = () => {
                 onRequestClose={() => setShowRequestModal(false)}
             >
                 <View className="flex-1 justify-end bg-black/60">
-                    <View className="bg-white rounded-t-[32px] p-6 pb-8 shadow-2xl" style={{ maxHeight: '85%' }}>
-                        <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mb-6" />
+                    <View className="bg-white rounded-t-[40px] p-6 pb-8 shadow-2xl" style={{ maxHeight: '85%' }}>
+                        <View className="w-12 h-1.5 bg-[#e2e8f0] rounded-full self-center mb-6" />
 
-                        <Text className="text-2xl font-black text-gray-900 mb-6 text-center">New Pickup Request</Text>
+                        <Text className="text-3xl font-black text-gray-900 mb-6 text-center tracking-tight">Nayi Request Agayi</Text>
 
                         {incomingRequest && (
                             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-                                <View className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
+                                <View className="bg-[#f8fafc] p-5 rounded-[32px] border border-[#f1f5f9]">
                                     
-                                    <View className="flex-row items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                                    <View className="flex-row items-center justify-between mb-4 pb-4 border-b border-[#e2e8f0]">
                                         <View className="flex-row items-center">
-                                            <View className="bg-amber-100 p-2.5 rounded-full mr-3">
-                                                <User color="#d97706" size={20} />
+                                            <View className="bg-[#fffbeb] p-3 rounded-[16px] mr-3">
+                                                <User color="#d97706" size={20} strokeWidth={2.5} />
                                             </View>
-                                            <Text className="font-extrabold text-gray-900 text-lg">
+                                            <Text className="font-black text-gray-900 text-xl tracking-tight">
                                                 {incomingRequest.customerName}
                                             </Text>
                                         </View>
                                         {incomingRequest.estimatedEarnings && (
-                                            <View className="bg-amber-600 px-3 py-1.5 rounded-full flex-row items-center shadow-sm">
-                                                <DollarSign color="#fff" size={14} />
-                                                <Text className="text-white font-bold text-sm ml-0.5">{incomingRequest.estimatedEarnings}</Text>
+                                            <View className="bg-[#d97706] px-3 py-1.5 rounded-[12px] flex-row items-center shadow-sm">
+                                                <DollarSign color="#ffffff" size={14} strokeWidth={3} />
+                                                <Text className="text-white font-black text-sm ml-0.5">{incomingRequest.estimatedEarnings}</Text>
                                             </View>
                                         )}
                                     </View>
 
-                                    <View className="flex-row items-start mb-5">
-                                        <MapPin color="#9ca3af" size={20} style={{ marginTop: 2 }} />
+                                    <View className="flex-row items-start mb-6">
+                                        <MapPin color="#64748b" size={20} style={{ marginTop: 2 }} strokeWidth={2.5} />
                                         <View className="ml-3 flex-1">
-                                            <Text className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Pickup Location</Text>
-                                            <Text className="text-gray-900 font-bold leading-tight">
+                                            <Text className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest mb-1">Pickup Ka Pata (Location)</Text>
+                                            <Text className="text-gray-900 font-bold text-sm leading-relaxed">
                                                 {incomingRequest.customerAddress}
                                             </Text>
                                         </View>
                                     </View>
 
-                                    <View className="flex-row gap-3 mb-5">
+                                    <View className="flex-row gap-3 mb-6">
                                         {incomingRequest.distance && (
-                                            <View className="flex-1 flex-row items-center bg-white p-3 rounded-2xl border border-gray-100">
-                                                <Navigation color="#d97706" size={20} />
-                                                <View className="ml-2">
-                                                    <Text className="text-[10px] text-gray-500 font-bold uppercase">Distance</Text>
-                                                    <Text className="text-gray-900 font-black">{incomingRequest.distance.toFixed(1)} km</Text>
+                                            <View className="flex-1 flex-row items-center bg-white p-3 rounded-[20px] border border-[#f1f5f9] shadow-sm">
+                                                <View className="bg-[#fffbeb] p-2 rounded-[12px]">
+                                                    <Navigation color="#d97706" size={18} strokeWidth={2.5} />
+                                                </View>
+                                                <View className="ml-3">
+                                                    <Text className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Fasla</Text>
+                                                    <Text className="text-gray-900 font-black text-base">{incomingRequest.distance.toFixed(1)} km</Text>
                                                 </View>
                                             </View>
                                         )}
                                         {incomingRequest.totalWeight && (
-                                            <View className="flex-1 flex-row items-center bg-white p-3 rounded-2xl border border-gray-100">
-                                                <Package color="#d97706" size={20} />
-                                                <View className="ml-2">
-                                                    <Text className="text-[10px] text-gray-500 font-bold uppercase">Total Weight</Text>
-                                                    <Text className="text-gray-900 font-black">{incomingRequest.totalWeight} Kg</Text>
+                                            <View className="flex-1 flex-row items-center bg-white p-3 rounded-[20px] border border-[#f1f5f9] shadow-sm">
+                                                <View className="bg-[#fffbeb] p-2 rounded-[12px]">
+                                                    <Package color="#d97706" size={18} strokeWidth={2.5} />
+                                                </View>
+                                                <View className="ml-3">
+                                                    <Text className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Kull Wazan</Text>
+                                                    <Text className="text-gray-900 font-black text-base">{incomingRequest.totalWeight} Kg</Text>
                                                 </View>
                                             </View>
                                         )}
@@ -400,24 +404,24 @@ const CollectorRideScreen = () => {
 
                                     {incomingRequest.items && incomingRequest.items.length > 0 && (
                                         <View>
-                                            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
-                                                Items Included ({incomingRequest.items.length})
+                                            <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 px-1">
+                                                Saman Ki Tafseel ({incomingRequest.items.length})
                                             </Text>
                                             {incomingRequest.items.map((item) => {
                                                 const category = categories.find(cat => cat.id === item.category);
                                                 const ItemIcon = category?.icon || Package;
                                                 return (
-                                                    <View key={item.id} className="bg-white p-3 rounded-2xl mb-2 flex-row items-center border border-gray-100 shadow-sm">
-                                                        <View style={{ backgroundColor: category?.color + '15', padding: 10, borderRadius: 12 }}>
-                                                            <ItemIcon size={20} color={category?.color || '#d97706'} />
+                                                    <View key={item.id} className="bg-white p-3 rounded-[20px] mb-2 flex-row items-center border border-[#f1f5f9] shadow-sm">
+                                                        <View style={{ backgroundColor: category?.color + '15' }} className="p-3 rounded-[14px]">
+                                                            <ItemIcon size={20} color={category?.color || '#d97706'} strokeWidth={2.5} />
                                                         </View>
                                                         <View className="ml-3 flex-1">
-                                                            <View className="flex-row justify-between items-center">
-                                                                <Text className="font-extrabold text-gray-900">{category?.label}</Text>
-                                                                <Text className="font-bold text-amber-600">{item.weight} Kg</Text>
+                                                            <View className="flex-row justify-between items-center mb-0.5">
+                                                                <Text className="font-black text-gray-900 text-base">{category?.label}</Text>
+                                                                <Text className="font-black text-[#d97706] text-sm">{item.weight} Kg</Text>
                                                             </View>
                                                             {item.description && (
-                                                                <Text className="text-xs text-gray-500 mt-1 font-medium">{item.description}</Text>
+                                                                <Text className="text-xs text-gray-500 font-bold">{item.description}</Text>
                                                             )}
                                                         </View>
                                                     </View>
@@ -429,19 +433,19 @@ const CollectorRideScreen = () => {
 
                                 <View className="flex-row gap-3 mt-6">
                                     <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        className="flex-1 bg-gray-100 py-4 rounded-2xl flex-row items-center justify-center"
+                                        activeOpacity={0.85}
+                                        className="flex-1 bg-[#f1f5f9] py-4 rounded-[24px] flex-row items-center justify-center border border-[#e2e8f0]"
                                         onPress={handleRejectRequest}
                                     >
-                                        <Text className="text-gray-700 font-extrabold text-base">Decline</Text>
+                                        <Text className="text-gray-700 font-black text-base tracking-wide">Inkaar Karein</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        className="flex-1 bg-amber-600 py-4 rounded-2xl flex-row items-center justify-center shadow-lg"
+                                        activeOpacity={0.85}
+                                        className="flex-1 bg-[#d97706] py-4 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-amber-600/30"
                                         onPress={handleAcceptRequest}
                                     >
-                                        <Text className="text-white font-extrabold text-base">Accept Ride</Text>
+                                        <Text className="text-white font-black text-base tracking-wide">Qabool Karein</Text>
                                     </TouchableOpacity>
                                 </View>
                             </ScrollView>
