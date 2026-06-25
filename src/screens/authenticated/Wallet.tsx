@@ -6,7 +6,7 @@ import { RootState } from '../../store/store'
 import { ArrowDownToLine, PlusCircle, ArrowUpRight, ArrowDownLeft, ChevronRight, Wallet as WalletIcon, X, Clock, AlertCircle } from 'lucide-react-native'
 import EmptyPic from "../../assets/homeempty.png"
 import { useSubmit } from "../../apiHooks/useSubmit"
-import { useFetch } from "../../apiHooks/useFetch"   // new
+import { useFetch } from "../../apiHooks/useFetch"
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import { useFocusEffect } from '@react-navigation/native'
 
@@ -14,30 +14,27 @@ const Wallet: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
     const role = userdata?.role || 'customer';
     const isCustomer = role === 'customer';
-
     const primaryColorHex = isCustomer ? '#059669' : '#d97706';
 
     const [activeTab, setActiveTab] = useState<'Sab' | 'Aye' | 'Gaye'>('Sab');
     const tabs = ['Sab', 'Aye', 'Gaye'] as const;
 
-    // ------ DATA FETCHING (useFetch) ------
-    const { data, isLoading: walletLoading, error: walletError, refetch } = useFetch({
+    const { data, isLoading, error, refetch } = useFetch({
         endpoint: 'wallet/api/v1',
         isAuth: true,
     });
     const balance = data?.balance || 0;
     const transactions = data?.transactions || [];
 
-
     useEffect(() => {
-        if (walletError) {
+        if (error) {
             Toast.show({
                 type: ALERT_TYPE.DANGER,
                 title: 'Error',
-                textBody: walletError.message || 'Wallet data nahi mil saka',
+                textBody: error.message || 'Wallet data nahi mil saka',
             });
         }
-    }, [walletError]);
+    }, [error]);
 
     useFocusEffect(
         useCallback(() => {
@@ -45,7 +42,6 @@ const Wallet: React.FC = () => {
         }, [refetch])
     );
 
-    // ------ MUTATIONS ------
     const { mutateAsync: depositMutate, isPending: depositing } = useSubmit({
         method: 'POST',
         endpoint: 'wallet/api/v1/deposit',
@@ -57,7 +53,6 @@ const Wallet: React.FC = () => {
         isAuth: true,
     });
 
-    // ------ MODALS & INPUTS ------
     const [showAddModal, setShowAddModal] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -71,75 +66,48 @@ const Wallet: React.FC = () => {
     const [withdrawAccountNo, setWithdrawAccountNo] = useState('');
     const [withdrawAccountTitle, setWithdrawAccountTitle] = useState('');
 
-    // ------ HANDLERS ------
     const handleAddSubmit = async () => {
         if (!amount || !tid || !senderAccount) return;
         try {
-            await depositMutate({
-                amount: parseFloat(amount),
-                senderAccount,
-                tid,
-            });
+            await depositMutate({ amount: parseFloat(amount), senderAccount, tid });
             setShowAddModal(false);
             setSuccessMessage({
                 title: 'Request Bhej Di Gayi',
                 body: `Aapki Rs ${Number(amount).toLocaleString()} jama karne ki request admin ko bhej di gayi hai. Tasdeeq ke baad balance update ho jayega.`,
             });
-            setAmount('');
-            setTid('');
-            setSenderAccount('');
+            setAmount(''); setTid(''); setSenderAccount('');
             setShowSuccessModal(true);
-            refetch();   // refresh wallet data
+            refetch();
         } catch (err: any) {
-            Toast.show({
-                type: ALERT_TYPE.DANGER,
-                title: 'Error',
-                textBody: err.message || 'Deposit request fail ho gayi',
-            });
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: err.message || 'Deposit request fail ho gayi' });
         }
     };
 
     const handleWithdrawSubmit = async () => {
         if (!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) return;
         try {
-            await withdrawMutate({
-                amount: parseFloat(amount),
-                withdrawBank,
-                withdrawAccountNo,
-                withdrawAccountTitle,
-            });
+            await withdrawMutate({ amount: parseFloat(amount), withdrawBank, withdrawAccountNo, withdrawAccountTitle });
             setShowWithdrawModal(false);
             setSuccessMessage({
                 title: 'Withdraw Request Darj',
                 body: `Aapki Rs ${Number(amount).toLocaleString()} nikalwane ki request darj ho gayi hai. 24 ghante mein aapke account mein bhej diye jayenge.`,
             });
-            setAmount('');
-            setWithdrawBank('');
-            setWithdrawAccountNo('');
-            setWithdrawAccountTitle('');
+            setAmount(''); setWithdrawBank(''); setWithdrawAccountNo(''); setWithdrawAccountTitle('');
             setShowSuccessModal(true);
             refetch();
         } catch (err: any) {
-            Toast.show({
-                type: ALERT_TYPE.DANGER,
-                title: 'Error',
-                textBody: err.message || 'Withdraw request fail ho gayi',
-            });
+            Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: err.message || 'Withdraw request fail ho gayi' });
         }
     };
 
-    // ------ MAP TRANSACTIONS FOR UI ------
     const mappedTransactions = transactions.map((tx: any) => ({
         id: tx.id.toString(),
         title: tx.type === 'deposit' ? 'Jama Ki Request' : 'Nikalwane Ki Request',
         type: tx.type === 'deposit' ? 'in' : 'out',
         amount: Number(tx.amount).toLocaleString(),
         date: new Date(tx.created_at).toLocaleDateString('ur-PK', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
         }),
         status: tx.status,
     }));
@@ -154,7 +122,7 @@ const Wallet: React.FC = () => {
     return (
         <View className="flex-1 bg-[#f8fafc]">
             <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" translucent={false} />
-
+            
             <View className="bg-[#f8fafc] z-20 pb-2">
                 <Header />
                 <View className="px-6 mt-2">
@@ -168,9 +136,8 @@ const Wallet: React.FC = () => {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120, paddingTop: 16 }}>
-                {/* Balance Card */}
                 <View className="px-5 mb-8">
-                    <View
+                    <View 
                         style={{ backgroundColor: primaryColorHex }}
                         className="w-full rounded-[32px] p-6 shadow-lg shadow-black/10 relative overflow-hidden"
                     >
@@ -195,18 +162,15 @@ const Wallet: React.FC = () => {
                         </View>
 
                         <View className="flex-row gap-3">
-                            <TouchableOpacity
-                                onPress={() => setShowAddModal(true)}
-                                activeOpacity={0.9}
+                            <TouchableOpacity 
+                                onPress={() => setShowAddModal(true)} activeOpacity={0.9}
                                 className="flex-1 py-4 rounded-[20px] flex-row items-center justify-center bg-white shadow-sm"
                             >
                                 <PlusCircle size={18} color={primaryColorHex} strokeWidth={2.5} />
                                 <Text className="font-black text-sm ml-2" style={{ color: primaryColorHex }}>Jama Karein</Text>
                             </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={() => setShowWithdrawModal(true)}
-                                activeOpacity={0.9}
+                            <TouchableOpacity 
+                                onPress={() => setShowWithdrawModal(true)} activeOpacity={0.9}
                                 className="flex-1 bg-black/20 py-4 rounded-[20px] flex-row items-center justify-center border border-white/20 backdrop-blur-md"
                             >
                                 <ArrowDownToLine size={18} color="#ffffff" strokeWidth={2.5} />
@@ -216,7 +180,6 @@ const Wallet: React.FC = () => {
                     </View>
                 </View>
 
-                {/* Transactions */}
                 <View className="px-5">
                     <View className="flex-row justify-between items-end mb-4 px-1">
                         <Text className="font-black text-gray-900 text-xl tracking-tight">Len Den ki Tafseel</Text>
@@ -226,15 +189,12 @@ const Wallet: React.FC = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Tabs */}
                     <View className="flex-row bg-gray-200/80 p-1.5 rounded-full border border-gray-100 mb-4">
                         {tabs.map((tab) => {
                             const isActive = activeTab === tab;
                             return (
                                 <TouchableOpacity
-                                    key={tab}
-                                    onPress={() => setActiveTab(tab)}
-                                    activeOpacity={0.8}
+                                    key={tab} onPress={() => setActiveTab(tab)} activeOpacity={0.8}
                                     className="flex-1 py-3 items-center rounded-full"
                                     style={isActive ? {
                                         backgroundColor: '#ffffff',
@@ -243,9 +203,7 @@ const Wallet: React.FC = () => {
                                         shadowOpacity: 0.05,
                                         shadowRadius: 4,
                                         elevation: 2,
-                                    } : {
-                                        backgroundColor: 'transparent'
-                                    }}
+                                    } : { backgroundColor: 'transparent' }}
                                 >
                                     <Text className="font-extrabold text-xs" style={{ color: isActive ? '#111827' : '#64748b' }}>
                                         {tab}
@@ -255,8 +213,7 @@ const Wallet: React.FC = () => {
                         })}
                     </View>
 
-                    {/* Loading indicator */}
-                    {walletLoading ? (
+                    {isLoading ? (
                         <View className="items-center justify-center py-20">
                             <ActivityIndicator size="large" color={primaryColorHex} />
                         </View>
@@ -266,19 +223,15 @@ const Wallet: React.FC = () => {
                                 const isIncome = tx.type === 'in';
                                 const isPending = tx.status === 'pending';
                                 return (
-                                    <View
-                                        key={tx.id}
+                                    <View 
+                                        key={tx.id} 
                                         className={`flex-row items-center justify-between p-4 ${index !== filteredTransactions.length - 1 ? 'border-b border-gray-50' : ''}`}
                                     >
                                         <View className="flex-row items-center flex-1 pr-4">
                                             <View className={`p-3 rounded-[18px] mr-4 ${isPending ? 'bg-amber-50' : isIncome ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                                                {isPending ? (
-                                                    <Clock size={20} color="#d97706" strokeWidth={2.5} />
-                                                ) : isIncome ? (
-                                                    <ArrowDownLeft size={20} color="#059669" strokeWidth={2.5} />
-                                                ) : (
-                                                    <ArrowUpRight size={20} color="#dc2626" strokeWidth={2.5} />
-                                                )}
+                                                {isPending ? <Clock size={20} color="#d97706" strokeWidth={2.5} /> :
+                                                 isIncome ? <ArrowDownLeft size={20} color="#059669" strokeWidth={2.5} /> :
+                                                 <ArrowUpRight size={20} color="#dc2626" strokeWidth={2.5} />}
                                             </View>
                                             <View>
                                                 <Text className="font-black text-gray-900 text-sm mb-0.5">{tx.title}</Text>
@@ -293,7 +246,7 @@ const Wallet: React.FC = () => {
                                             </Text>
                                         </View>
                                     </View>
-                                );
+                                )
                             })}
                         </View>
                     ) : (
@@ -310,7 +263,7 @@ const Wallet: React.FC = () => {
                 </View>
             </ScrollView>
 
-            {/* Add Funds Modal */}
+            {/* Add Funds Modal – unchanged, but uses depositing */}
             <Modal visible={showAddModal} transparent animationType="slide" onRequestClose={() => setShowAddModal(false)}>
                 <View className="flex-1 justify-end bg-black/60">
                     <View className="bg-white rounded-t-[40px] p-6 pb-10 shadow-2xl">
@@ -331,52 +284,39 @@ const Wallet: React.FC = () => {
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Raqam (PKR)</Text>
                         <TextInput
-                            value={amount}
-                            onChangeText={setAmount}
-                            placeholder="Misaal: 1000"
-                            placeholderTextColor="#cbd5e1"
-                            keyboardType="numeric"
+                            value={amount} onChangeText={setAmount} placeholder="Misaal: 1000"
+                            placeholderTextColor="#cbd5e1" keyboardType="numeric"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-black text-gray-900 text-lg mb-4 shadow-sm"
                         />
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Aapka Account Number</Text>
                         <TextInput
-                            value={senderAccount}
-                            onChangeText={setSenderAccount}
-                            placeholder="Jis number se paise bheje"
-                            placeholderTextColor="#cbd5e1"
-                            keyboardType="phone-pad"
+                            value={senderAccount} onChangeText={setSenderAccount} placeholder="Jis number se paise bheje"
+                            placeholderTextColor="#cbd5e1" keyboardType="phone-pad"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-4 shadow-sm"
                         />
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Transaction ID (TID)</Text>
                         <TextInput
-                            value={tid}
-                            onChangeText={setTid}
-                            placeholder="SMS mein aane wali TID darj karein"
+                            value={tid} onChangeText={setTid} placeholder="SMS mein aane wali TID darj karein"
                             placeholderTextColor="#cbd5e1"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-8 shadow-sm"
                         />
 
-                        <TouchableOpacity
-                            disabled={depositing || !amount || !tid || !senderAccount}
-                            onPress={handleAddSubmit}
+                        <TouchableOpacity 
+                            disabled={depositing || !amount || !tid || !senderAccount} 
+                            onPress={handleAddSubmit} 
                             className={`w-full py-4 rounded-[24px] items-center justify-center flex-row ${(!amount || !tid || !senderAccount) ? 'bg-gray-200' : ''}`}
                             style={(!amount || !tid || !senderAccount) ? {} : { backgroundColor: primaryColorHex }}
                         >
-                            {depositing ? (
-                                <ActivityIndicator size="small" color="#ffffff" />
-                            ) : (
-                                <Text className={`font-black text-lg ${(!amount || !tid || !senderAccount) ? 'text-gray-400' : 'text-white'}`}>
-                                    Request Bhejein
-                                </Text>
-                            )}
+                            {depositing ? <ActivityIndicator size="small" color="#ffffff" /> :
+                                <Text className={`font-black text-lg ${(!amount || !tid || !senderAccount) ? 'text-gray-400' : 'text-white'}`}>Request Bhejein</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
 
-            {/* Withdraw Modal */}
+            {/* Withdraw Modal – unchanged, but uses withdrawing */}
             <Modal visible={showWithdrawModal} transparent animationType="slide" onRequestClose={() => setShowWithdrawModal(false)}>
                 <View className="flex-1 justify-end bg-black/60">
                     <View className="bg-white rounded-t-[40px] p-6 pb-10 shadow-2xl">
@@ -389,61 +329,46 @@ const Wallet: React.FC = () => {
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Nikalwane wali Raqam (PKR)</Text>
                         <TextInput
-                            value={amount}
-                            onChangeText={setAmount}
-                            placeholder="Misaal: 500"
-                            placeholderTextColor="#cbd5e1"
-                            keyboardType="numeric"
+                            value={amount} onChangeText={setAmount} placeholder="Misaal: 500"
+                            placeholderTextColor="#cbd5e1" keyboardType="numeric"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-black text-gray-900 text-lg mb-4 shadow-sm"
                         />
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Bank Ya Wallet Ka Naam</Text>
                         <TextInput
-                            value={withdrawBank}
-                            onChangeText={setWithdrawBank}
-                            placeholder="JazzCash, EasyPaisa, ya Meezan Bank"
+                            value={withdrawBank} onChangeText={setWithdrawBank} placeholder="JazzCash, EasyPaisa, ya Meezan Bank"
                             placeholderTextColor="#cbd5e1"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-4 shadow-sm"
                         />
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Account Number</Text>
                         <TextInput
-                            value={withdrawAccountNo}
-                            onChangeText={setWithdrawAccountNo}
-                            placeholder="Aapka account number"
-                            placeholderTextColor="#cbd5e1"
-                            keyboardType="phone-pad"
+                            value={withdrawAccountNo} onChangeText={setWithdrawAccountNo} placeholder="Aapka account number"
+                            placeholderTextColor="#cbd5e1" keyboardType="phone-pad"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-4 shadow-sm"
                         />
 
                         <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-1">Account Title (Naam)</Text>
                         <TextInput
-                            value={withdrawAccountTitle}
-                            onChangeText={setWithdrawAccountTitle}
-                            placeholder="Account holder ka naam"
+                            value={withdrawAccountTitle} onChangeText={setWithdrawAccountTitle} placeholder="Account holder ka naam"
                             placeholderTextColor="#cbd5e1"
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-8 shadow-sm"
                         />
 
-                        <TouchableOpacity
-                            disabled={withdrawing || !amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle}
-                            onPress={handleWithdrawSubmit}
+                        <TouchableOpacity 
+                            disabled={withdrawing || !amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle} 
+                            onPress={handleWithdrawSubmit} 
                             className={`w-full py-4 rounded-[24px] items-center justify-center flex-row ${(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? 'bg-gray-200' : ''}`}
                             style={(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? {} : { backgroundColor: primaryColorHex }}
                         >
-                            {withdrawing ? (
-                                <ActivityIndicator size="small" color="#ffffff" />
-                            ) : (
-                                <Text className={`font-black text-lg ${(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? 'text-gray-400' : 'text-white'}`}>
-                                    Submit Request
-                                </Text>
-                            )}
+                            {withdrawing ? <ActivityIndicator size="small" color="#ffffff" /> :
+                                <Text className={`font-black text-lg ${(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? 'text-gray-400' : 'text-white'}`}>Submit Request</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
 
-            {/* Success Modal */}
+            {/* Success Modal – unchanged */}
             <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
                 <View className="flex-1 justify-center items-center bg-black/60 px-5">
                     <View className="bg-white rounded-[32px] p-6 w-full max-w-sm shadow-2xl items-center border border-gray-100">

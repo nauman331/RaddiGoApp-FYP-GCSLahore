@@ -1,21 +1,47 @@
-import { View, Text, Image, TouchableOpacity, StatusBar, ScrollView } from 'react-native'
-import React from 'react'
+import { View, Text, Image, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native'
+import React, { useCallback, useEffect } from 'react'
 import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import { ArrowRight, Wallet, Clock, HeadphonesIcon, Settings, MapPin, ChevronRight, ShieldCheck, Zap } from 'lucide-react-native'
+import { useFetch } from '../../apiHooks/useFetch'
+import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
+import { useFocusEffect } from '@react-navigation/native'
 
 const Home: React.FC = ({ navigation }: any) => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string, username?: string } };
     
     const activeRideStatus = 'idle'; 
-    
     const role = userdata?.role || 'customer'; 
     const isCustomer = role === 'customer'; 
-    
     const primaryColor = isCustomer ? '#059669' : '#d97706'; 
     const primaryLight = isCustomer ? '#ecfdf5' : '#fffbeb'; 
+
+    // ----- Fetch wallet balance -----
+    const { data, isLoading, error, refetch } = useFetch({
+        endpoint: 'wallet/api/v1',
+        isAuth: true,
+    });
+    const walletBalance = data?.balance ?? 0;   // fallback to 0 if not loaded
+
+    // Show error if fetch fails
+    useEffect(() => {
+        if (error) {
+            Toast.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: error.message || 'Wallet balance nahi mil saka',
+            });
+        }
+    }, [error]);
+
+    // Refetch when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
 
     const quickActions = [
         { id: 1, label: 'Batwa', icon: Wallet, route: 'Wallet' },
@@ -66,7 +92,13 @@ const Home: React.FC = ({ navigation }: any) => {
                                 </Text>
                                 <View className="flex-row items-end mt-1">
                                     <Text className="text-white/90 font-bold text-xl mr-2 mb-1">Rs</Text>
-                                    <Text className="text-white font-black text-5xl tracking-tight">4,250</Text>
+                                    {isLoading ? (
+                                        <ActivityIndicator color="white" size="large" />
+                                    ) : (
+                                        <Text className="text-white font-black text-5xl tracking-tight">
+                                            {walletBalance.toLocaleString()}
+                                        </Text>
+                                    )}
                                 </View>
                             </View>
                             <View className="bg-white/20 p-3.5 rounded-[20px] backdrop-blur-md">
@@ -77,7 +109,7 @@ const Home: React.FC = ({ navigation }: any) => {
                         <View className="flex-row items-center mt-8">
                             <View className="bg-black/10 px-3 py-1.5 rounded-[10px] flex-row items-center mr-3 backdrop-blur-md">
                                  <Text className="text-white font-black text-[11px] uppercase tracking-wider">
-                                     12 {isCustomer ? 'Pickups' : 'Orders'}
+                                     0 {isCustomer ? 'Pickups' : 'Orders'}
                                  </Text>
                             </View>
                             <Text className="text-white/80 font-bold text-xs">Is mahinay</Text>
