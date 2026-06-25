@@ -1,84 +1,160 @@
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, Image, Modal, TextInput, ActivityIndicator } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import Header from '../../components/Header'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import { ArrowDownToLine, PlusCircle, ArrowUpRight, ArrowDownLeft, ChevronRight, Wallet as WalletIcon, X, Clock, AlertCircle } from 'lucide-react-native'
 import EmptyPic from "../../assets/homeempty.png"
+import { useSubmit } from "../../apiHooks/useSubmit"
+import { useFetch } from "../../apiHooks/useFetch"   // new
+import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
+import { useFocusEffect } from '@react-navigation/native'
 
 const Wallet: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
     const role = userdata?.role || 'customer';
-    const isCustomer = role === 'customer'; 
+    const isCustomer = role === 'customer';
 
-    const primaryColorHex = isCustomer ? '#059669' : '#d97706'; 
-    const primaryLightHex = isCustomer ? '#ecfdf5' : '#fffbeb'; 
+    const primaryColorHex = isCustomer ? '#059669' : '#d97706';
 
     const [activeTab, setActiveTab] = useState<'Sab' | 'Aye' | 'Gaye'>('Sab');
     const tabs = ['Sab', 'Aye', 'Gaye'] as const;
 
+    // ------ DATA FETCHING (useFetch) ------
+    const { data, isLoading: walletLoading, error: walletError, refetch } = useFetch({
+        endpoint: 'wallet/api/v1',
+        isAuth: true,
+    });
+    const balance = data?.balance || 0;
+    const transactions = data?.transactions || [];
+
+
+    useEffect(() => {
+        if (walletError) {
+            Toast.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: walletError.message || 'Wallet data nahi mil saka',
+            });
+        }
+    }, [walletError]);
+
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
+
+    // ------ MUTATIONS ------
+    const { mutateAsync: depositMutate, isPending: depositing } = useSubmit({
+        method: 'POST',
+        endpoint: 'wallet/api/v1/deposit',
+        isAuth: true,
+    });
+    const { mutateAsync: withdrawMutate, isPending: withdrawing } = useSubmit({
+        method: 'POST',
+        endpoint: 'wallet/api/v1/withdraw',
+        isAuth: true,
+    });
+
+    // ------ MODALS & INPUTS ------
     const [showAddModal, setShowAddModal] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState({ title: '', body: '' });
-    
+
     const [amount, setAmount] = useState('');
     const [tid, setTid] = useState('');
     const [senderAccount, setSenderAccount] = useState('');
-    
+
     const [withdrawBank, setWithdrawBank] = useState('');
     const [withdrawAccountNo, setWithdrawAccountNo] = useState('');
     const [withdrawAccountTitle, setWithdrawAccountTitle] = useState('');
-    
-    const [loading, setLoading] = useState(false);
 
-    const mockTransactions = [
-        { id: '1', title: 'Raddi Bachi', type: 'in', amount: '1,250', date: 'Aaj, 10:30 AM', status: 'completed' },
-        { id: '2', title: 'JazzCash Withdraw', type: 'out', amount: '2,000', date: 'Kal, 04:15 PM', status: 'completed' },
-        { id: '3', title: 'Deposit Request', type: 'in', amount: '500', date: 'Aaj, 09:00 AM', status: 'pending' },
-    ];
+    // ------ HANDLERS ------
+    const handleAddSubmit = async () => {
+        if (!amount || !tid || !senderAccount) return;
+        try {
+            await depositMutate({
+                amount: parseFloat(amount),
+                senderAccount,
+                tid,
+            });
+            setShowAddModal(false);
+            setSuccessMessage({
+                title: 'Request Bhej Di Gayi',
+                body: `Aapki Rs ${Number(amount).toLocaleString()} jama karne ki request admin ko bhej di gayi hai. Tasdeeq ke baad balance update ho jayega.`,
+            });
+            setAmount('');
+            setTid('');
+            setSenderAccount('');
+            setShowSuccessModal(true);
+            refetch();   // refresh wallet data
+        } catch (err: any) {
+            Toast.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: err.message || 'Deposit request fail ho gayi',
+            });
+        }
+    };
 
-    const filteredTransactions = mockTransactions.filter(tx => {
+    const handleWithdrawSubmit = async () => {
+        if (!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) return;
+        try {
+            await withdrawMutate({
+                amount: parseFloat(amount),
+                withdrawBank,
+                withdrawAccountNo,
+                withdrawAccountTitle,
+            });
+            setShowWithdrawModal(false);
+            setSuccessMessage({
+                title: 'Withdraw Request Darj',
+                body: `Aapki Rs ${Number(amount).toLocaleString()} nikalwane ki request darj ho gayi hai. 24 ghante mein aapke account mein bhej diye jayenge.`,
+            });
+            setAmount('');
+            setWithdrawBank('');
+            setWithdrawAccountNo('');
+            setWithdrawAccountTitle('');
+            setShowSuccessModal(true);
+            refetch();
+        } catch (err: any) {
+            Toast.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: err.message || 'Withdraw request fail ho gayi',
+            });
+        }
+    };
+
+    // ------ MAP TRANSACTIONS FOR UI ------
+    const mappedTransactions = transactions.map((tx: any) => ({
+        id: tx.id.toString(),
+        title: tx.type === 'deposit' ? 'Jama Ki Request' : 'Nikalwane Ki Request',
+        type: tx.type === 'deposit' ? 'in' : 'out',
+        amount: Number(tx.amount).toLocaleString(),
+        date: new Date(tx.created_at).toLocaleDateString('ur-PK', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }),
+        status: tx.status,
+    }));
+
+    const filteredTransactions = mappedTransactions.filter((tx: any) => {
         if (activeTab === 'Sab') return true;
         if (activeTab === 'Aye') return tx.type === 'in';
         if (activeTab === 'Gaye') return tx.type === 'out';
         return true;
     });
 
-    const handleAddSubmit = () => {
-        if (!amount || !tid || !senderAccount) return;
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
-            setShowAddModal(false);
-            setSuccessMessage({
-                title: 'Request Bhej Di Gayi',
-                body: `Aapki Rs ${Number(amount).toLocaleString()} jama karne ki request admin ko bhej di gayi hai. Tasdeeq ke baad balance update ho jayega.`
-            });
-            setAmount(''); setTid(''); setSenderAccount('');
-            setShowSuccessModal(true);
-        }, 1500);
-    };
-
-    const handleWithdrawSubmit = () => {
-        if (!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) return;
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
-            setShowWithdrawModal(false);
-            setSuccessMessage({
-                title: 'Withdraw Request Darj',
-                body: `Aapki Rs ${Number(amount).toLocaleString()} nikalwane ki request darj ho gayi hai. 24 ghante mein aapke account mein bhej diye jayenge.`
-            });
-            setAmount(''); setWithdrawBank(''); setWithdrawAccountNo(''); setWithdrawAccountTitle('');
-            setShowSuccessModal(true);
-        }, 1500);
-    };
-
     return (
         <View className="flex-1 bg-[#f8fafc]">
             <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" translucent={false} />
-            
+
             <View className="bg-[#f8fafc] z-20 pb-2">
                 <Header />
                 <View className="px-6 mt-2">
@@ -92,9 +168,9 @@ const Wallet: React.FC = () => {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120, paddingTop: 16 }}>
-                
+                {/* Balance Card */}
                 <View className="px-5 mb-8">
-                    <View 
+                    <View
                         style={{ backgroundColor: primaryColorHex }}
                         className="w-full rounded-[32px] p-6 shadow-lg shadow-black/10 relative overflow-hidden"
                     >
@@ -108,7 +184,9 @@ const Wallet: React.FC = () => {
                                 </Text>
                                 <View className="flex-row items-baseline mt-1">
                                     <Text className="text-white/90 font-bold text-xl mr-2">Rs</Text>
-                                    <Text className="text-white font-black text-5xl tracking-tight">4,250</Text>
+                                    <Text className="text-white font-black text-5xl tracking-tight">
+                                        {balance.toLocaleString()}
+                                    </Text>
                                 </View>
                             </View>
                             <View className="bg-white/20 p-3.5 rounded-[20px] backdrop-blur-md">
@@ -117,7 +195,7 @@ const Wallet: React.FC = () => {
                         </View>
 
                         <View className="flex-row gap-3">
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setShowAddModal(true)}
                                 activeOpacity={0.9}
                                 className="flex-1 py-4 rounded-[20px] flex-row items-center justify-center bg-white shadow-sm"
@@ -126,7 +204,7 @@ const Wallet: React.FC = () => {
                                 <Text className="font-black text-sm ml-2" style={{ color: primaryColorHex }}>Jama Karein</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setShowWithdrawModal(true)}
                                 activeOpacity={0.9}
                                 className="flex-1 bg-black/20 py-4 rounded-[20px] flex-row items-center justify-center border border-white/20 backdrop-blur-md"
@@ -138,6 +216,7 @@ const Wallet: React.FC = () => {
                     </View>
                 </View>
 
+                {/* Transactions */}
                 <View className="px-5">
                     <View className="flex-row justify-between items-end mb-4 px-1">
                         <Text className="font-black text-gray-900 text-xl tracking-tight">Len Den ki Tafseel</Text>
@@ -147,6 +226,7 @@ const Wallet: React.FC = () => {
                         </TouchableOpacity>
                     </View>
 
+                    {/* Tabs */}
                     <View className="flex-row bg-gray-200/80 p-1.5 rounded-full border border-gray-100 mb-4">
                         {tabs.map((tab) => {
                             const isActive = activeTab === tab;
@@ -175,14 +255,19 @@ const Wallet: React.FC = () => {
                         })}
                     </View>
 
-                    {filteredTransactions.length > 0 ? (
+                    {/* Loading indicator */}
+                    {walletLoading ? (
+                        <View className="items-center justify-center py-20">
+                            <ActivityIndicator size="large" color={primaryColorHex} />
+                        </View>
+                    ) : filteredTransactions.length > 0 ? (
                         <View className="bg-white rounded-[32px] p-2 border border-gray-100 shadow-sm">
-                            {filteredTransactions.map((tx, index) => {
+                            {filteredTransactions.map((tx: any, index: number) => {
                                 const isIncome = tx.type === 'in';
                                 const isPending = tx.status === 'pending';
                                 return (
-                                    <View 
-                                        key={tx.id} 
+                                    <View
+                                        key={tx.id}
                                         className={`flex-row items-center justify-between p-4 ${index !== filteredTransactions.length - 1 ? 'border-b border-gray-50' : ''}`}
                                     >
                                         <View className="flex-row items-center flex-1 pr-4">
@@ -208,7 +293,7 @@ const Wallet: React.FC = () => {
                                             </Text>
                                         </View>
                                     </View>
-                                )
+                                );
                             })}
                         </View>
                     ) : (
@@ -273,13 +358,19 @@ const Wallet: React.FC = () => {
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-8 shadow-sm"
                         />
 
-                        <TouchableOpacity 
-                            disabled={loading || !amount || !tid || !senderAccount} 
-                            onPress={handleAddSubmit} 
+                        <TouchableOpacity
+                            disabled={depositing || !amount || !tid || !senderAccount}
+                            onPress={handleAddSubmit}
                             className={`w-full py-4 rounded-[24px] items-center justify-center flex-row ${(!amount || !tid || !senderAccount) ? 'bg-gray-200' : ''}`}
                             style={(!amount || !tid || !senderAccount) ? {} : { backgroundColor: primaryColorHex }}
                         >
-                            {loading ? <ActivityIndicator size="small" color="#ffffff" /> : <Text className={`font-black text-lg ${(!amount || !tid || !senderAccount) ? 'text-gray-400' : 'text-white'}`}>Request Bhejein</Text>}
+                            {depositing ? (
+                                <ActivityIndicator size="small" color="#ffffff" />
+                            ) : (
+                                <Text className={`font-black text-lg ${(!amount || !tid || !senderAccount) ? 'text-gray-400' : 'text-white'}`}>
+                                    Request Bhejein
+                                </Text>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -334,13 +425,19 @@ const Wallet: React.FC = () => {
                             className="bg-[#f8fafc] px-4 h-[56px] rounded-[20px] border-[2px] border-gray-100 font-bold text-gray-900 text-base mb-8 shadow-sm"
                         />
 
-                        <TouchableOpacity 
-                            disabled={loading || !amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle} 
-                            onPress={handleWithdrawSubmit} 
+                        <TouchableOpacity
+                            disabled={withdrawing || !amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle}
+                            onPress={handleWithdrawSubmit}
                             className={`w-full py-4 rounded-[24px] items-center justify-center flex-row ${(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? 'bg-gray-200' : ''}`}
                             style={(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? {} : { backgroundColor: primaryColorHex }}
                         >
-                            {loading ? <ActivityIndicator size="small" color="#ffffff" /> : <Text className={`font-black text-lg ${(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? 'text-gray-400' : 'text-white'}`}>Submit Request</Text>}
+                            {withdrawing ? (
+                                <ActivityIndicator size="small" color="#ffffff" />
+                            ) : (
+                                <Text className={`font-black text-lg ${(!amount || !withdrawBank || !withdrawAccountNo || !withdrawAccountTitle) ? 'text-gray-400' : 'text-white'}`}>
+                                    Submit Request
+                                </Text>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
