@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, CheckCheck, Package, Sparkles, BellRing, Wallet, MapPin } from 'lucide-react-native'
+import { ChevronLeft, CheckCheck, Package, Sparkles, BellRing, Wallet, MapPin } from 'lucide-react-native'
 import EmptyPic from "../../assets/homeempty.png"
 
 const Notifications: React.FC = () => {
@@ -22,33 +22,33 @@ const Notifications: React.FC = () => {
         {
             id: '1',
             type: 'order',
-            title: 'Collector Arriving Soon!',
-            message: 'Your rider is 5 minutes away. Please keep your Raddi ready.',
-            time: '2 mins ago',
+            title: isCollector ? 'Naya Pickup Agaya!' : 'Collector Pohnchne Wala Hai!',
+            message: isCollector ? 'Aapke ilaqay mein ek naya raddi pickup dastiyab hai.' : 'Aapka rider 5 minute door hai. Raddi tayyar rakhein.',
+            time: '2 minute pehle',
             isRead: false,
         },
         {
             id: '2',
             type: 'wallet',
-            title: 'Payment Received',
-            message: 'PKR 1,250 has been successfully added to your wallet.',
-            time: '1 hour ago',
+            title: 'Paise Mil Gaye',
+            message: 'PKR 1,250 aapke wallet mein jama kar diye gaye hain.',
+            time: '1 ghanta pehle',
             isRead: false,
         },
         {
             id: '3',
             type: 'promo',
-            title: 'Invite & Earn PKR 500',
-            message: 'Invite your friends to RaddiGo and earn bonus rewards on their first pickup.',
-            time: 'Yesterday',
+            title: 'Doston Ko Bulayen, PKR 500 Kamayen',
+            message: 'Apne doston ko RaddiGo par invite karein aur pehle pickup par bonus kamayen.',
+            time: 'Kal',
             isRead: true,
         },
         {
             id: '4',
             type: 'system',
-            title: 'System Update Completed',
-            message: 'We have optimized our matching algorithm for faster pickups.',
-            time: '2 days ago',
+            title: 'System Update Mukammal',
+            message: 'Humne app ko mazeed behtar aur tez bana diya hai taake aapko asani ho.',
+            time: '2 din pehle',
             isRead: true,
         }
     ];
@@ -68,7 +68,7 @@ const Notifications: React.FC = () => {
             case 'promo':
                 return { icon: Sparkles, color: '#d97706', bg: '#fffbeb' };
             default:
-                return { icon: BellRing, color: '#4b5563', bg: '#f3f4f6' };
+                return { icon: BellRing, color: '#4b5563', bg: '#f1f5f9' };
         }
     };
 
@@ -80,26 +80,26 @@ const Notifications: React.FC = () => {
                 <TouchableOpacity 
                     activeOpacity={0.7}
                     onPress={() => navigation.goBack()}
-                    className="w-12 h-12 bg-white rounded-full items-center justify-center border border-gray-100 shadow-sm"
+                    className="w-12 h-12 bg-white rounded-[16px] items-center justify-center border border-[#f1f5f9] shadow-sm"
                 >
-                    <ArrowLeft size={24} color="#111827" strokeWidth={2.5} />
+                    <ChevronLeft size={24} color="#0f172a" strokeWidth={2.5} />
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                     activeOpacity={0.7}
                     onPress={handleMarkAllRead}
-                    className="bg-gray-200/80 px-4 py-2.5 rounded-full flex-row items-center"
+                    className="bg-[#f1f5f9] px-4 py-2.5 rounded-[14px] flex-row items-center border border-[#e2e8f0]"
                 >
-                    <CheckCheck size={16} color="#4b5563" strokeWidth={2.5} />
-                    <Text className="text-gray-600 font-extrabold text-xs ml-1.5">Mark all read</Text>
+                    <CheckCheck size={16} color="#475569" strokeWidth={2.5} />
+                    <Text className="text-gray-700 font-extrabold text-[10px] ml-1.5 uppercase tracking-widest">Sab Parh Lein</Text>
                 </TouchableOpacity>
             </View>
 
             <View className="px-6 pt-2 pb-6">
-                <Text className="text-gray-400 font-bold text-[11px] uppercase tracking-widest mb-1">
-                    Stay Updated
+                <Text className="text-gray-400 font-extrabold text-[11px] uppercase tracking-widest mb-1">
+                    Bakhabar Rahein
                 </Text>
-                <Text className="text-gray-900 font-black text-3xl tracking-tight">
+                <Text className="text-gray-900 font-black text-3xl tracking-tight leading-none">
                     Notifications
                 </Text>
             </View>
@@ -113,23 +113,23 @@ const Notifications: React.FC = () => {
                             <TouchableOpacity 
                                 key={notification.id}
                                 activeOpacity={0.7}
-                                className={`w-full bg-white rounded-[28px] p-5 mb-3 flex-row items-start border shadow-sm ${notification.isRead ? 'border-gray-100/50 opacity-80' : 'border-gray-200 shadow-md'}`}
+                                className={`w-full bg-white rounded-[24px] p-5 mb-4 flex-row items-start border ${notification.isRead ? 'border-[#f8fafc] opacity-70' : 'border-[#f1f5f9] shadow-sm'}`}
                             >
-                                <View className="p-3.5 rounded-[18px] mr-4 mt-1" style={{ backgroundColor: bg }}>
+                                <View className="p-3.5 rounded-[16px] mr-4 mt-0.5" style={{ backgroundColor: bg }}>
                                     <Icon size={22} color={color} strokeWidth={2.5} />
                                 </View>
                                 
-                                <View className="flex-1 pr-2">
-                                    <View className="flex-row items-start justify-between mb-1">
-                                        <Text className="text-gray-900 font-black text-base flex-1 pr-2" numberOfLines={1}>
+                                <View className="flex-1 pr-1">
+                                    <View className="flex-row items-start justify-between mb-1.5">
+                                        <Text className="text-gray-900 font-black text-base flex-1 pr-2 tracking-tight" numberOfLines={1}>
                                             {notification.title}
                                         </Text>
                                         {!notification.isRead && (
-                                            <View className="w-2.5 h-2.5 rounded-full mt-1.5" style={{ backgroundColor: primaryColorHex }} />
+                                            <View className="w-2.5 h-2.5 rounded-full mt-1.5 shadow-sm" style={{ backgroundColor: primaryColorHex }} />
                                         )}
                                     </View>
                                     
-                                    <Text className="text-gray-600 font-medium text-xs leading-relaxed mb-3">
+                                    <Text className="text-gray-600 font-bold text-xs leading-relaxed mb-3">
                                         {notification.message}
                                     </Text>
                                     
@@ -141,15 +141,15 @@ const Notifications: React.FC = () => {
                         )
                     })
                 ) : (
-                    <View className="bg-white rounded-[32px] p-8 w-full items-center border border-gray-100 shadow-sm mt-4">
-                        <View className="bg-gray-50 w-24 h-24 rounded-full items-center justify-center mb-6">
+                    <View className="bg-white rounded-[32px] p-8 w-full items-center border border-[#f1f5f9] shadow-sm mt-4">
+                        <View className="bg-[#f8fafc] w-24 h-24 rounded-full items-center justify-center mb-5">
                             <Image source={EmptyPic} className="w-14 h-14 opacity-50" resizeMode="contain" />
                         </View>
                         <Text className="text-gray-900 text-xl font-black text-center mb-2 tracking-tight">
-                            All Caught Up!
+                            Sab Parh Liya!
                         </Text>
-                        <Text className="text-gray-500 text-sm text-center leading-relaxed font-medium px-4">
-                            You have no new notifications. When something important happens, we will let you know right here.
+                        <Text className="text-gray-500 text-sm text-center leading-relaxed font-bold px-2">
+                            Aapke paas koi naya notification nahi hai. Kuch naya aane par hum aapko yahan aagah karenge.
                         </Text>
                     </View>
                 )}
