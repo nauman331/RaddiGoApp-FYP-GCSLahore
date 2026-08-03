@@ -42,10 +42,29 @@ const AppContent: React.FC = () => {
     initPermissions();
   }, []);
 
+  const syncFcmToken = async (fcmToken: string) => {
+    if (!token || !fcmToken) return;
+    try {
+      const cleanBase = apiURL.endsWith('/') ? apiURL.slice(0, -1) : apiURL;
+      await fetch(`${cleanBase}/auth/api/v1/me/fcm-token`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fcmToken }),
+      });
+      console.log("FCM token registered with backend successfully");
+    } catch (e) {
+      console.log("FCM token registration error:", e);
+    }
+  };
+
   const getUser = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${apiURL}auth/api/v1/me`, {
+      const cleanBase = apiURL.endsWith('/') ? apiURL.slice(0, -1) : apiURL;
+      const response = await fetch(`${cleanBase}/auth/api/v1/me`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -59,7 +78,7 @@ const AppContent: React.FC = () => {
         dispatch(logout());
         return;
       }
-      dispatch(setuser(data.user))
+      dispatch(setuser(data.user));
       console.log("User data fetched successfully:", data.user);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch user data");

@@ -23,8 +23,9 @@ const Wallet: React.FC = () => {
         endpoint: 'wallet/api/v1',
         isAuth: true,
     });
-    const balance = data?.balance || 0;
-    const transactions = data?.transactions || [];
+    // API returns: { balance: number, transactions: [...] }
+    const balance = Number(data?.balance ?? data?.wallet?.balance ?? 0);
+    const transactionsList = Array.isArray(data?.transactions) ? data.transactions : [];
 
     useEffect(() => {
         if (error) {
@@ -100,7 +101,7 @@ const Wallet: React.FC = () => {
         }
     };
 
-    const mappedTransactions = transactions.map((tx: any) => ({
+    const mappedTransactions = transactionsList.map((tx: any) => ({
         id: tx.id.toString(),
         title: tx.type === 'deposit' ? 'Jama Ki Request' : 'Nikalwane Ki Request',
         type: tx.type === 'deposit' ? 'in' : 'out',
@@ -152,7 +153,7 @@ const Wallet: React.FC = () => {
                                 <View className="flex-row items-baseline mt-1">
                                     <Text className="text-white/90 font-bold text-xl mr-2">Rs</Text>
                                     <Text className="text-white font-black text-5xl tracking-tight">
-                                        {balance.toLocaleString()}
+                                        {Number(balance).toLocaleString()}
                                     </Text>
                                 </View>
                             </View>

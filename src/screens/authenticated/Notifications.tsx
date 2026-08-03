@@ -18,42 +18,7 @@ const Notifications: React.FC = () => {
     const primaryColorHex = isCollector ? '#d97706' : '#059669';
     const primaryLightHex = isCollector ? '#fffbeb' : '#ecfdf5';
 
-    const initialNotifications = [
-        {
-            id: '1',
-            type: 'order',
-            title: isCollector ? 'Naya Pickup Agaya!' : 'Collector Pohnchne Wala Hai!',
-            message: isCollector ? 'Aapke ilaqay mein ek naya raddi pickup dastiyab hai.' : 'Aapka rider 5 minute door hai. Raddi tayyar rakhein.',
-            time: '2 minute pehle',
-            isRead: false,
-        },
-        {
-            id: '2',
-            type: 'wallet',
-            title: 'Paise Mil Gaye',
-            message: 'PKR 1,250 aapke wallet mein jama kar diye gaye hain.',
-            time: '1 ghanta pehle',
-            isRead: false,
-        },
-        {
-            id: '3',
-            type: 'promo',
-            title: 'Doston Ko Bulayen, PKR 500 Kamayen',
-            message: 'Apne doston ko RaddiGo par invite karein aur pehle pickup par bonus kamayen.',
-            time: 'Kal',
-            isRead: true,
-        },
-        {
-            id: '4',
-            type: 'system',
-            title: 'System Update Mukammal',
-            message: 'Humne app ko mazeed behtar aur tez bana diya hai taake aapko asani ho.',
-            time: '2 din pehle',
-            isRead: true,
-        }
-    ];
-
-    const [notifications, setNotifications] = useState(initialNotifications);
+    const [notifications, setNotifications] = useState<any[]>([]);
 
     const handleMarkAllRead = () => {
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));

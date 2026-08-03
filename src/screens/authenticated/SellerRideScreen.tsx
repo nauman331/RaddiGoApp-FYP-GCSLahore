@@ -8,7 +8,10 @@ import BottomSheet from '../../components/BottomSheet'
 import { getCurrentLocation, getLocationPermission } from '../../utils/getPermissions'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
-import { MapPin, Package, User, FileText, Smartphone, Boxes, Wine, Layers, Plus, Trash2, Send } from 'lucide-react-native'
+import { MapPin, Package, User, FileText, Smartphone, Boxes, Wine, Layers, Plus, Trash2, Send, MessageSquare, DollarSign, RefreshCw, CheckCircle2, X } from 'lucide-react-native'
+import { useFetch } from '../../apiHooks/useFetch'
+import { useNavigation } from '@react-navigation/native'
+import { BidItem } from '../../types/integration'
 
 const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
 
@@ -24,6 +27,7 @@ interface Nearbycollector {
 
 const CustomerRideScreen = () => {
     const dispatch = useDispatch();
+    const navigation = useNavigation<any>();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; name?: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const rideState = useSelector((state: RootState) => state.ride);
@@ -40,17 +44,32 @@ const CustomerRideScreen = () => {
     const [newItem, setNewItem] = useState<{ category: RaddiItem['category'] | null; weight: string; description: string }>({
         category: null, weight: '', description: '',
     });
+    const [incomingBids, setIncomingBids] = useState<BidItem[]>([]);
+    const [showBidsModal, setShowBidsModal] = useState(false);
+    const [selectedBidForCounter, setSelectedBidForCounter] = useState<BidItem | null>(null);
+    const [counterAmount, setCounterAmount] = useState('');
     const bottomSheetRef = useRef<any>(null);
 
-    const categories: { id: RaddiItem['category']; label: string; icon: any; color: string }[] = [
-        { id: 'paper', label: 'Kaghaz (Paper)', icon: FileText, color: '#3b82f6' },
-        { id: 'plastic', label: 'Plastic', icon: Layers, color: '#f59e0b' },
-        { id: 'metal', label: 'Loha / Metal', icon: Package, color: '#64748b' },
-        { id: 'electronics', label: 'Electronics', icon: Smartphone, color: '#8b5cf6' },
-        { id: 'cardboard', label: 'Gatta (Cardboard)', icon: Boxes, color: '#d97706' },
-        { id: 'glass', label: 'Sheesha (Glass)', icon: Wine, color: '#10b981' },
-        { id: 'other', label: 'Deegar (Other)', icon: MapPin, color: '#ef4444' },
-    ];
+    const { data: catData } = useFetch({
+        endpoint: 'category/api/v1/categories?page=1&limit=50',
+        isAuth: false,
+    });
+
+    // API returns: { categories: [...], pagination: {} }
+    const catRaw = catData?.categories ?? catData?.data ?? catData;
+    const apiCategories = Array.isArray(catRaw)
+        ? catRaw
+        : Array.isArray(catRaw?.categories)
+        ? catRaw.categories
+        : [];
+
+    const categories = apiCategories.map((c: any) => ({
+        id: String(c.id),
+        label: `${c.nameEng}${c.nameUrdu ? ` (${c.nameUrdu})` : ''}`,
+        icon: Package,
+        color: '#059669',
+        todayPrice: c.todayPrice,
+    }));
 
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
         const R = 6371; 
@@ -112,11 +131,58 @@ const CustomerRideScreen = () => {
 
         socketService.on('orderCreated', (data: any) => {
             if (data.success) {
-                Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Chali Gayi', textBody: `Aapki request ${data.driverCount} collectors ko bhej di gayi hai.` });
+                Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Request Chali Gayi', textBody: `Aapki request ${data.driverCount || data.nearbyDriverCount || 0} collectors ko bhej di gayi hai.` });
+                dispatch(setRideStatus('pending'));
             } else {
                 Toast.show({ type: ALERT_TYPE.WARNING, title: 'Koi Collector Nahi', textBody: data.message || 'Is waqt koi qareebi collector nahi hai.' });
                 dispatch(resetRide());
             }
+        });
+
+        // Bidding socket handlers
+        socketService.on('newBidReceived', (bid: BidItem) => {
+            setIncomingBids(prev => {
+                const existing = prev.filter(b => b.id !== bid.id);
+                return [...existing, bid];
+            });
+            setShowBidsModal(true);
+            Toast.show({
+                type: ALERT_TYPE.INFO,
+                title: 'Nayi Boli (New Bid)!',
+                textBody: `${bid.collectorName} ne Rs ${bid.bidAmount} ki boli lagayi hai.`,
+            });
+        });
+
+        socketService.on('counterAccepted', (data: any) => {
+            Toast.show({
+                type: ALERT_TYPE.SUCCESS,
+                title: 'Counter Offer Manzoor!',
+                textBody: `${data.collectorName || 'Collector'} ne Rs ${data.finalPrice} ki counter offer qabool kar li hai.`,
+            });
+            dispatch(setRideStatus('accepted'));
+            setShowBidsModal(false);
+        });
+
+        socketService.on('counterRejected', (data: any) => {
+            Toast.show({
+                type: ALERT_TYPE.WARNING,
+                title: 'Counter Offer Radd',
+                textBody: data.message || 'Collector ne counter offer radd kar di.',
+            });
+        });
+
+        socketService.on('liveLocationUpdate', (data: { orderId: number; collectorId: number; latitude: number; longitude: number }) => {
+            dispatch(updatecollectorLocation({ latitude: data.latitude, longitude: data.longitude }));
+        });
+
+        socketService.on('orderCompleted', (data: any) => {
+            Toast.show({
+                type: ALERT_TYPE.SUCCESS,
+                title: 'Pickup Mukammal!',
+                textBody: `Rs ${data.finalPrice || data.walletCredited} aapke batwe mein jama kar diye gaye hain.`,
+            });
+            dispatch(setRideStatus('completed'));
+            setTimeout(() => { dispatch(resetRide()); }, 3000);
         });
 
         socketService.on('rideOrderAccepted', (data: any) => {
@@ -149,11 +215,16 @@ const CustomerRideScreen = () => {
         return () => {
             socketService.off('nearbycollectorsUpdate');
             socketService.off('orderCreated');
+            socketService.off('newBidReceived');
+            socketService.off('counterAccepted');
+            socketService.off('counterRejected');
+            socketService.off('liveLocationUpdate');
+            socketService.off('orderCompleted');
             socketService.off('rideOrderAccepted');
             socketService.off('driverLocationUpdate');
             socketService.off('pickupRequestRejected');
         };
-    }, []);
+        }, []);
 
     const handleSelectcollector = (collector: Nearbycollector) => {
         setSelectedcollector(collector);
@@ -219,6 +290,33 @@ const CustomerRideScreen = () => {
         } else {
             Toast.show({ type: ALERT_TYPE.WARNING, title: 'Internet Masla', textBody: 'Aap is waqt offline hain.' });
         }
+    };
+
+    const handleAcceptBid = (bid: BidItem) => {
+        if (!isConnected) {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Offline', textBody: 'Internet connection check karein.' });
+            return;
+        }
+        socketService.emit('acceptBid', { orderId: Number(rideState.orderId) || bid.orderId, bidId: bid.id });
+        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Boli Manzoor!', textBody: `${bid.collectorName} ki boli Rs ${bid.bidAmount} par manzoor kar li gayi.` });
+        dispatch(setRideStatus('accepted'));
+        setShowBidsModal(false);
+    };
+
+    const handleSendCounterBid = () => {
+        if (!selectedBidForCounter || !counterAmount) return;
+        if (!isConnected) {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Offline', textBody: 'Internet connection check karein.' });
+            return;
+        }
+        socketService.emit('counterBid', {
+            orderId: Number(rideState.orderId) || selectedBidForCounter.orderId,
+            bidId: selectedBidForCounter.id,
+            counterAmount: parseFloat(counterAmount),
+        });
+        Toast.show({ type: ALERT_TYPE.INFO, title: 'Counter Offer Bhej Di', textBody: `Rs ${counterAmount} ki counter offer bhej di gayi.` });
+        setSelectedBidForCounter(null);
+        setCounterAmount('');
     };
 
     const getStatusInfo = () => {
@@ -364,7 +462,7 @@ const CustomerRideScreen = () => {
                                 </View>
 
                                 {items.map((item) => {
-                                    const category = categories.find(cat => cat.id === item.category);
+                                    const category = categories.find((cat: any) => cat.id === item.category);
                                     const ItemIcon = category?.icon || Package;
                                     return (
                                         <View key={item.id} className="mb-3 bg-white p-3.5 rounded-[20px] border border-[#f1f5f9] shadow-sm flex-row items-center justify-between">
@@ -417,7 +515,7 @@ const CustomerRideScreen = () => {
 
                             <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 px-1">Kism (Category)</Text>
                             <View className="flex-row flex-wrap gap-2 mb-6">
-                                {categories.map((category) => {
+                                {categories.map((category: any) => {
                                     const CategoryIcon = category.icon;
                                     const isSelected = newItem.category === category.id;
                                     return (
@@ -464,6 +562,102 @@ const CustomerRideScreen = () => {
                                     <Text className="text-white font-black text-base">Save Karein</Text>
                                 </TouchableOpacity>
                             </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* Floating Chat Button when order is active */}
+                {rideState.status !== 'idle' && (
+                    <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => navigation.navigate('Chat', {
+                            orderId: rideState.orderId,
+                            recipientName: rideState.collectorName || 'Collector',
+                            recipientId: rideState.collectorId,
+                        })}
+                        className="absolute bottom-28 right-5 bg-emerald-600 p-4 rounded-full shadow-2xl z-40 flex-row items-center border border-white"
+                    >
+                        <MessageSquare color="#ffffff" size={22} strokeWidth={2.5} />
+                    </TouchableOpacity>
+                )}
+
+                {/* Bids Modal */}
+                <Modal visible={showBidsModal} transparent animationType="slide" onRequestClose={() => setShowBidsModal(false)}>
+                    <View className="flex-1 justify-end bg-black/60">
+                        <View className="bg-white rounded-t-[40px] p-6 pb-10 shadow-2xl max-h-[85%]">
+                            <View className="flex-row justify-between items-center mb-4">
+                                <View>
+                                    <Text className="text-2xl font-black text-gray-900">Aane Wali Boliyaan (Bids)</Text>
+                                    <Text className="text-xs font-bold text-gray-400">Collectors ki taraf se mili boliyaan</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setShowBidsModal(false)} className="p-2 bg-gray-100 rounded-full">
+                                    <X size={20} color="#374151" strokeWidth={2.5} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                {incomingBids.map((bid) => (
+                                    <View key={bid.id} className="bg-[#f8fafc] p-5 rounded-[28px] mb-4 border border-[#f1f5f9]">
+                                        <View className="flex-row justify-between items-center mb-3">
+                                            <View className="flex-row items-center">
+                                                <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center mr-3">
+                                                    <User size={20} color="#059669" strokeWidth={2.5} />
+                                                </View>
+                                                <View>
+                                                    <Text className="font-black text-gray-900 text-lg">{bid.collectorName}</Text>
+                                                    <Text className="text-xs font-bold text-gray-400">Round {bid.round}</Text>
+                                                </View>
+                                            </View>
+                                            <View className="bg-emerald-50 px-4 py-2 rounded-[16px] border border-emerald-100">
+                                                <Text className="font-black text-emerald-700 text-xl">Rs {bid.bidAmount}</Text>
+                                            </View>
+                                        </View>
+
+                                        {bid.note ? (
+                                            <Text className="text-xs font-bold text-gray-600 mb-4 bg-white p-3 rounded-[16px]">
+                                                "{bid.note}"
+                                            </Text>
+                                        ) : null}
+
+                                        <View className="flex-row gap-3">
+                                            <TouchableOpacity
+                                                onPress={() => setSelectedBidForCounter(bid)}
+                                                className="flex-1 bg-gray-100 py-3.5 rounded-[18px] items-center border border-gray-200"
+                                            >
+                                                <Text className="font-black text-gray-800 text-sm">Counter Offer</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => handleAcceptBid(bid)}
+                                                className="flex-1 bg-emerald-600 py-3.5 rounded-[18px] items-center shadow-sm"
+                                            >
+                                                <Text className="font-black text-white text-sm">Manzoor Karein</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        {/* Counter Offer Input Sub-Form */}
+                                        {selectedBidForCounter?.id === bid.id && (
+                                            <View className="mt-4 pt-4 border-t border-gray-200">
+                                                <Text className="text-xs font-extrabold text-gray-500 mb-2">Aapki Price (Counter Offer Rs):</Text>
+                                                <View className="flex-row gap-2">
+                                                    <TextInput
+                                                        value={counterAmount}
+                                                        onChangeText={setCounterAmount}
+                                                        placeholder="Misaal: 1250"
+                                                        keyboardType="numeric"
+                                                        className="flex-1 bg-white px-4 h-[48px] rounded-[16px] border border-gray-300 font-black text-gray-900"
+                                                    />
+                                                    <TouchableOpacity
+                                                        onPress={handleSendCounterBid}
+                                                        className="bg-gray-900 px-5 rounded-[16px] justify-center"
+                                                    >
+                                                        <Text className="font-black text-white text-sm">Bhejein</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        )}
+                                    </View>
+                                ))}
+                            </ScrollView>
                         </View>
                     </View>
                 </Modal>

@@ -13,6 +13,7 @@ import collectorRideScreen from "../screens/authenticated/BuyerRideScreen";
 import customerRideScreen from "../screens/authenticated/SellerRideScreen";
 import walletScreen from "../screens/authenticated/Wallet";
 import Notifications from "../screens/authenticated/Notifications";
+import ChatScreen from "../screens/authenticated/ChatScreen";
 
 import { Home as HomeIcon, Clock, User, ChevronLeft, MapPin, Wallet as WalletIcon } from "lucide-react-native";
 
@@ -162,6 +163,11 @@ export default function AuthenticatedStack() {
             <Stack.Screen 
                 name="Notifications" 
                 component={Notifications} 
+                options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+                name="Chat" 
+                component={ChatScreen} 
                 options={{ headerShown: false }} 
             />
         </Stack.Navigator>

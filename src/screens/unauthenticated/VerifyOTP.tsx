@@ -50,17 +50,20 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
     const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
 
     const handleVerify = async () => {
-        if (otp.length !== 6) {
+        // Extra safety strip — removes any spaces Android may have injected
+        const cleanOtp = otp.replace(/\s/g, '').replace(/[^0-9]/g, '')
+        if (cleanOtp.length !== 6) {
             Toast.show({ type: ALERT_TYPE.WARNING, title: 'Ghalat OTP', textBody: '6-digit ka code darj karein' })
             return
         }
         try {
-            await verifyOTP({ email, otp })
+            await verifyOTP({ email, otp: cleanOtp })
             setVerified(true)
             Animated.spring(successScale, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }).start()
             setTimeout(() => navigation.navigate('SignIn', { role }), 1600)
         } catch (e: any) {
             Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Verification mein masla aya' })
+            setOtp('')
         }
     }
 
@@ -69,17 +72,20 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
         try {
             await resendOTP({ email })
             Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Dobara bhej diya!', textBody: 'Naya code apke email par bhej diya gaya' })
-            setTimer(120); setCanResend(false); setOtp('')
+            setTimer(120)
+            setCanResend(false)
+            setOtp('')
         } catch (e: any) {
             Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Dobara bhejnay mein masla aya' })
         }
     }
 
-    // Masked email: jo***@gmail.com
-    const maskedEmail = email.replace(/^(.{2})(.*)(@.*)$/, (_ : string, a : string, b : string, c : string) => a + '*'.repeat(Math.min(b.length, 4)) + c)
+    const maskedEmail = email.replace(/^(.{2})(.*)(@.*)$/, (_: string, a: string, b: string, c: string) =>
+        a + '*'.repeat(Math.min(b.length, 4)) + c
+    )
 
     return (
-        <View style={[styles.root, { backgroundColor: '#FAFAFA' }]}>
+        <View style={styles.root}>
             <View style={[styles.topAccent, { backgroundColor: theme.primary }]} />
 
             <TouchableOpacity
@@ -102,7 +108,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                         <View style={{ flex: 1 }}>
                             <Text style={styles.greeting}>Bas thora sa aur!</Text>
                             <Text style={[styles.title, { color: theme.primary }]}>Email Verify Karein</Text>
-                            <Text style={styles.subtitle}>Andar anay se pehle confirm karein ke yeh aap hain.</Text>
+                            <Text style={styles.subtitle}>Neechay wala code darj karein jo apki email par aya hai.</Text>
                         </View>
                         <View style={[styles.logoWrap, { borderColor: theme.primary + '30' }]}>
                             <Image source={LogoImage} style={styles.logo} resizeMode="contain" />
@@ -124,7 +130,6 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                     <View style={styles.card}>
 
                         {verified ? (
-                            /* Success state */
                             <Animated.View style={[styles.successWrap, { transform: [{ scale: successScale }] }]}>
                                 <View style={[styles.successCircle, { backgroundColor: theme.light }]}>
                                     <CheckCircle2 size={48} color={theme.primary} strokeWidth={2} />
@@ -134,36 +139,44 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                             </Animated.View>
                         ) : (
                             <>
-                                <Text style={styles.otpHint}>Neechay 6-digit ka code darj karein</Text>
+                                <Text style={styles.otpLabel}>6-Digit Verification Code</Text>
 
-                                {/* OTP visual boxes */}
-                                <View style={styles.otpRow}>
+                                {/* Single plain TextInput — works flawlessly on Android */}
+                                <TextInput
+                                    value={otp}
+                                    onChangeText={t => setOtp(
+                                        t.replace(/\s/g, '')   // strip any spaces Android may inject
+                                         .replace(/[^0-9]/g, '') // digits only
+                                         .slice(0, 6)
+                                    )}
+                                    keyboardType="number-pad"
+                                    maxLength={6}
+                                    autoFocus
+                                    placeholder="______"
+                                    placeholderTextColor="#CBD5E1"
+                                    style={[
+                                        styles.otpInput,
+                                        {
+                                            borderColor: otp.length > 0 ? theme.primary : '#E2E8F0',
+                                            color: theme.primary,
+                                        }
+                                    ]}
+                                />
+
+                                {/* Progress dots */}
+                                <View style={styles.dotsRow}>
                                     {Array.from({ length: 6 }).map((_, i) => (
                                         <View
                                             key={i}
                                             style={[
-                                                styles.otpBox,
-                                                otp[i]
-                                                    ? { borderColor: theme.primary, backgroundColor: theme.light }
-                                                    : { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }
+                                                styles.dot,
+                                                i < otp.length
+                                                    ? { backgroundColor: theme.primary, width: 10, height: 10 }
+                                                    : { backgroundColor: '#E2E8F0', width: 8, height: 8 }
                                             ]}
-                                        >
-                                            <Text style={[styles.otpChar, otp[i] ? { color: theme.primary } : { color: 'transparent' }]}>
-                                                {otp[i] || '0'}
-                                            </Text>
-                                        </View>
+                                        />
                                     ))}
                                 </View>
-
-                                {/* Invisible real TextInput overlaid */}
-                                <TextInput
-                                    value={otp}
-                                    onChangeText={t => setOtp(t.replace(/[^0-9]/g, '').slice(0, 6))}
-                                    keyboardType="number-pad"
-                                    maxLength={6}
-                                    autoFocus
-                                    style={styles.hiddenInput}
-                                />
 
                                 {/* Timer / Resend */}
                                 <View style={styles.timerRow}>
@@ -176,7 +189,7 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
                                         </TouchableOpacity>
                                     ) : (
                                         <View style={styles.timerWrap}>
-                                            <Text style={styles.timerLabel}>Dobara code bhejein </Text>
+                                            <Text style={styles.timerLabel}>Dobara bhejein: </Text>
                                             <View style={[styles.timerBadge, { backgroundColor: theme.light }]}>
                                                 <Text style={[styles.timerCount, { color: theme.primary }]}>{fmt(timer)}</Text>
                                             </View>
@@ -222,10 +235,14 @@ const VerifyOTP: React.FC<{ navigation: any; route: any }> = ({ navigation, rout
 }
 
 const styles = StyleSheet.create({
-    root: { flex: 1 },
+    root: { flex: 1, backgroundColor: '#FAFAFA' },
     topAccent: { height: 3 },
     scroll: { paddingHorizontal: 22, paddingTop: 60, paddingBottom: 40 },
-    backBtn: { position: 'absolute', top: 16, left: 20, zIndex: 10, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    backBtn: {
+        position: 'absolute', top: 16, left: 20, zIndex: 10,
+        width: 40, height: 40, borderRadius: 12,
+        alignItems: 'center', justifyContent: 'center',
+    },
 
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
     greeting: { fontSize: 13, color: '#999', fontWeight: '500', marginBottom: 2 },
@@ -234,20 +251,47 @@ const styles = StyleSheet.create({
     logoWrap: { width: 52, height: 52, borderRadius: 16, overflow: 'hidden', borderWidth: 1.5 },
     logo: { width: 52, height: 52 },
 
-    // Email card
     emailCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, marginBottom: 20 },
     mailIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     emailCardLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.2, marginBottom: 2 },
     emailCardValue: { fontSize: 14, fontWeight: '700' },
 
-    // Card
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 22, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 3, marginBottom: 20 },
-    otpHint: { fontSize: 13, color: '#888', textAlign: 'center', marginBottom: 20, fontWeight: '500' },
+    card: {
+        backgroundColor: '#fff', borderRadius: 24, padding: 22,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06, shadowRadius: 16, elevation: 3, marginBottom: 20,
+    },
 
-    otpRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 20 },
-    otpBox: { width: 44, height: 54, borderRadius: 14, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-    otpChar: { fontSize: 24, fontWeight: '800' },
-    hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
+    otpLabel: {
+        fontSize: 12, fontWeight: '700', color: '#94A3B8',
+        letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 12,
+    },
+
+    // Single clean OTP input
+    otpInput: {
+        width: '100%',
+        height: 68,
+        borderWidth: 2,
+        borderRadius: 18,
+        fontSize: 28,
+        fontWeight: '800',
+        textAlign: 'center',
+        paddingHorizontal: 16,
+        backgroundColor: '#F8FAFC',
+        // NOTE: No letterSpacing — Android inserts real spaces when letterSpacing
+        // is applied to an editable TextInput, corrupting the OTP value.
+    },
+
+    // Progress dots below input
+    dotsRow: {
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 16,
+        marginBottom: 20,
+    },
+    dot: { borderRadius: 99 },
 
     timerRow: { alignItems: 'center', marginBottom: 20 },
     timerWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -257,11 +301,15 @@ const styles = StyleSheet.create({
     resendBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
     resendText: { fontSize: 13, fontWeight: '700' },
 
-    primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingLeft: 26, paddingRight: 14, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
+    primaryBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingVertical: 14, paddingLeft: 26, paddingRight: 14, borderRadius: 16,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1, shadowRadius: 10, elevation: 3,
+    },
     primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
     arrowCircle: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
 
-    // Success
     successWrap: { alignItems: 'center', paddingVertical: 24 },
     successCircle: { width: 88, height: 88, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     successTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, marginBottom: 6 },

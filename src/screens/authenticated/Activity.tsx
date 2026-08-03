@@ -6,6 +6,8 @@ import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
 import { MapPin, CalendarClock, Package, CheckCircle2, XCircle } from 'lucide-react-native'
 
+import { useFetch } from '../../apiHooks/useFetch'
+
 const Activity: React.FC = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string } };
     const rideState = useSelector((state: RootState) => state.ride);
@@ -19,9 +21,21 @@ const Activity: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'Sab' | 'Pura Hua' | 'Cancel Hua'>('Sab');
     const tabs = ['Sab', 'Pura Hua', 'Cancel Hua'] as const;
 
-    const filteredOrders = (rideState?.orderHistory || []).filter(order => {
+    const { data: orderData } = useFetch({
+        endpoint: isCustomer ? 'order/api/v1/my-orders?page=1&limit=20' : 'order/api/v1/my-pickups?page=1&limit=20',
+        isAuth: true,
+    });
+
+    // API returns: { orders: [...], pagination: {} }
+    const apiOrders = Array.isArray(orderData?.orders)
+        ? orderData.orders
+        : Array.isArray(orderData)
+        ? orderData
+        : [];
+
+    const filteredOrders = (Array.isArray(apiOrders) ? apiOrders : []).filter((order: any) => {
         if (!order || !order.status) return false; 
-        const status = order.status.toLowerCase();
+        const status = String(order.status).toLowerCase();
         if (activeTab === 'Sab') return true;
         if (activeTab === 'Pura Hua' && status === 'completed') return true;
         if (activeTab === 'Cancel Hua' && status === 'cancelled') return true;

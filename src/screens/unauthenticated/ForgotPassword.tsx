@@ -82,20 +82,24 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
     }
 
     const handleVerifyOTP = async () => {
-        if (otp.length !== 6) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Ghalat OTP', textBody: '6-digit ka code darj karein' }); return }
-        try {
-            await verifyOTP({ email, otp })
-            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Verified!', textBody: 'Ab apna naya password banayein' })
-            setStep(3); animateStep()
-        } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Verification mein masla aya' }) }
+        const cleanOtp = otp.replace(/\s/g, '').replace(/[^0-9]/g, '')
+        if (cleanOtp.length !== 6) {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Ghalat OTP', textBody: '6-digit ka code darj karein' })
+            return
+        }
+        // Advance to Step 3 — /auth/api/v1/reset-password verifies the OTP together with the new password
+        setStep(3)
+        animateStep()
     }
 
     const handleResetPassword = async () => {
+        const cleanOtp = otp.replace(/\s/g, '').replace(/[^0-9]/g, '')
         if (!newPassword || !confirmPassword) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Zaroori', textBody: 'Tamam fields pur karein' }); return }
         if (newPassword !== confirmPassword) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Match nahi hue', textBody: 'Passwords aik dosray se match nahi kar rahe' }); return }
         if (newPassword.length < 6) { Toast.show({ type: ALERT_TYPE.WARNING, title: 'Bohat chhota', textBody: 'Kam az kam 6 characters honay chahiye' }); return }
         try {
-            await resetPassword({ email, otp, password: newPassword })
+            // Send both field names: spec uses 'newPassword', some backend versions use 'password'
+            await resetPassword({ email, otp: cleanOtp, newPassword, password: newPassword })
             Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Ho gaya!', textBody: 'Password kamyabi se reset ho gaya' })
             navigation.navigate('SignIn', { role })
         } catch (e: any) { Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: e.message || 'Reset mein masla aya' }) }
@@ -212,31 +216,42 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                         {/* Step 2: OTP */}
                         {step === 2 && (
                             <>
-                                {/* OTP boxes */}
-                                <View style={styles.otpRow}>
+                                <Text style={styles.otpLabel}>6-Digit Verification Code</Text>
+
+                                {/* Single plain TextInput — same reliable approach as VerifyOTP */}
+                                <TextInput
+                                    value={otp}
+                                    onChangeText={t => setOtp(
+                                        t.replace(/\s/g, '')    // strip Android-injected spaces
+                                         .replace(/[^0-9]/g, '') // digits only
+                                         .slice(0, 6)
+                                    )}
+                                    keyboardType="number-pad"
+                                    maxLength={6}
+                                    autoFocus
+                                    placeholder="______"
+                                    placeholderTextColor="#CBD5E1"
+                                    style={[
+                                        styles.otpInput,
+                                        { borderColor: otp.length > 0 ? theme.primary : '#E2E8F0', color: theme.primary }
+                                    ]}
+                                />
+
+                                {/* Progress dots */}
+                                <View style={styles.dotsRow}>
                                     {Array.from({ length: 6 }).map((_, i) => (
                                         <View
                                             key={i}
                                             style={[
-                                                styles.otpBox,
-                                                otp[i] ? { borderColor: theme.primary, backgroundColor: theme.light } : { borderColor: '#E5E7EB' },
+                                                styles.dot,
+                                                i < otp.length
+                                                    ? { backgroundColor: theme.primary, width: 10, height: 10 }
+                                                    : { backgroundColor: '#E2E8F0', width: 8, height: 8 }
                                             ]}
-                                        >
-                                            <Text style={[styles.otpChar, { color: theme.primary }]}>
-                                                {otp[i] || ''}
-                                            </Text>
-                                        </View>
+                                        />
                                     ))}
                                 </View>
-                                {/* Hidden real input behind the boxes */}
-                                <TextInput
-                                    value={otp}
-                                    onChangeText={t => setOtp(t.replace(/[^0-9]/g, '').slice(0, 6))}
-                                    keyboardType="number-pad"
-                                    maxLength={6}
-                                    style={styles.hiddenInput}
-                                    autoFocus
-                                />
+
                                 {/* Timer / Resend */}
                                 <View style={styles.timerRow}>
                                     {canResend ? (
@@ -369,11 +384,15 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 15, fontWeight: '500', height: '100%', color: '#111' },
     errorHint: { fontSize: 11, color: '#EF4444', marginTop: 5, fontWeight: '500' },
 
-    // OTP display
-    otpRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 14 },
-    otpBox: { width: 44, height: 52, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-    otpChar: { fontSize: 22, fontWeight: '800', letterSpacing: 0 },
-    hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
+    // OTP input — single visible input, no letterSpacing (Android injects spaces)
+    otpLabel: { fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 12 },
+    otpInput: {
+        width: '100%', height: 68, borderWidth: 2, borderRadius: 18,
+        fontSize: 28, fontWeight: '800', textAlign: 'center',
+        paddingHorizontal: 16, backgroundColor: '#F8FAFC',
+    },
+    dotsRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center', marginTop: 14, marginBottom: 16 },
+    dot: { borderRadius: 99 },
 
     timerRow: { alignItems: 'center', marginBottom: 8 },
     timerWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },

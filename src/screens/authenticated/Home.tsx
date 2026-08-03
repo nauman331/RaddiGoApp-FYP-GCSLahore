@@ -1,29 +1,39 @@
 import { View, Text, Image, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native'
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
-import { ArrowRight, Wallet, Clock, HeadphonesIcon, Settings, MapPin, ChevronRight, ShieldCheck, Zap } from 'lucide-react-native'
+import { ArrowRight, Wallet, Clock, HeadphonesIcon, Settings, MapPin, ChevronRight, ShieldCheck, Zap, TrendingUp } from 'lucide-react-native'
 import { useFetch } from '../../apiHooks/useFetch'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import { useFocusEffect } from '@react-navigation/native'
+import MarketRatesModal from '../../components/MarketRatesModal'
 
 const Home: React.FC = ({ navigation }: any) => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { role?: string, username?: string } };
-    
-    const activeRideStatus = 'idle'; 
-    const role = userdata?.role || 'customer'; 
-    const isCustomer = role === 'customer'; 
-    const primaryColor = isCustomer ? '#059669' : '#d97706'; 
-    const primaryLight = isCustomer ? '#ecfdf5' : '#fffbeb'; 
+    const [showRatesModal, setShowRatesModal] = useState(false);
+
+    const activeRideStatus = 'idle';
+    const role = userdata?.role || 'customer';
+    const isCustomer = role === 'customer';
+    const primaryColor = isCustomer ? '#059669' : '#d97706';
+    const primaryLight = isCustomer ? '#ecfdf5' : '#fffbeb';
 
     // ----- Fetch wallet balance -----
     const { data, isLoading, error, refetch } = useFetch({
         endpoint: 'wallet/api/v1',
         isAuth: true,
     });
-    const walletBalance = data?.balance ?? 0;   // fallback to 0 if not loaded
+    // API returns: { balance: number|string, transactions: [...] }
+    const walletBalance = Number(data?.balance ?? data?.wallet?.balance ?? 0);
+
+    // ----- Fetch order/pickup count -----
+    const { data: orderData } = useFetch({
+        endpoint: isCustomer ? 'order/api/v1/my-orders?page=1&limit=1' : 'order/api/v1/my-pickups?page=1&limit=1',
+        isAuth: true,
+    });
+    const orderCount = orderData?.pagination?.total ?? 0;
 
     // Show error if fetch fails
     useEffect(() => {
@@ -53,7 +63,7 @@ const Home: React.FC = ({ navigation }: any) => {
     return (
         <View className='flex-1 bg-[#f8fafc]'>
             <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" translucent={false} />
-            
+
             <View className="bg-[#f8fafc] z-20 pb-2">
                 <Header />
                 <View className="px-6 mt-2 flex-row items-center justify-between">
@@ -73,12 +83,12 @@ const Home: React.FC = ({ navigation }: any) => {
                     </View>
                 </View>
             </View>
-            
+
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120, paddingTop: 16 }}>
-                
+
                 <View className="px-5 mb-6">
-                    <TouchableOpacity 
-                        activeOpacity={0.9} 
+                    <TouchableOpacity
+                        activeOpacity={0.9}
                         style={{ backgroundColor: primaryColor }}
                         className="w-full rounded-[32px] p-6 shadow-lg shadow-black/10 relative overflow-hidden"
                     >
@@ -108,17 +118,17 @@ const Home: React.FC = ({ navigation }: any) => {
 
                         <View className="flex-row items-center mt-8">
                             <View className="bg-black/10 px-3 py-1.5 rounded-[10px] flex-row items-center mr-3 backdrop-blur-md">
-                                 <Text className="text-white font-black text-[11px] uppercase tracking-wider">
-                                     0 {isCustomer ? 'Pickups' : 'Orders'}
-                                 </Text>
+                                <Text className="text-white font-black text-[11px] uppercase tracking-wider">
+                                    {orderCount} {isCustomer ? 'Pickups' : 'Orders'}
+                                </Text>
                             </View>
-                            <Text className="text-white/80 font-bold text-xs">Is mahinay</Text>
+                            <Text className="text-white/80 font-bold text-xs">Total</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
 
                 {activeRideStatus !== 'idle' && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         className='mx-5 mb-6 bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 flex-row items-center'
                         onPress={() => navigation.navigate('Ride')}
                         activeOpacity={0.9}
@@ -151,9 +161,36 @@ const Home: React.FC = ({ navigation }: any) => {
                                 {isCustomer ? "Pickup Bulao" : "Raddi Kharido"}
                             </Text>
                         </View>
-                        
+
                         <View className="w-20 h-24 rounded-[24px] items-center justify-center" style={{ backgroundColor: primaryLight }}>
                             <ArrowRight size={32} color={primaryColor} strokeWidth={2.5} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Zinda Rate (Live Market Rates Banner) */}
+                <View className="px-5 mb-8">
+                    <TouchableOpacity
+                        onPress={() => setShowRatesModal(true)}
+                        activeOpacity={0.9}
+                        className="w-full bg-emerald-50 rounded-[28px] p-4 flex-row items-center justify-between border border-emerald-100 shadow-sm"
+                        style={{ backgroundColor: primaryLight }}
+                    >
+                        <View className="flex-row items-center flex-1">
+                            <View className="p-3.5 bg-white rounded-[18px] mr-3.5 shadow-sm">
+                                <TrendingUp size={24} color={primaryColor} strokeWidth={2.5} />
+                            </View>
+                            <View>
+                                <Text className="font-extrabold text-[10px] uppercase tracking-widest text-emerald-800" style={{ color: primaryColor }}>
+                                    Zinda Rate (Live Rates)
+                                </Text>
+                                <Text className="font-black text-gray-900 text-lg tracking-tight">
+                                    Aaj ke Scrap Rates dekhein
+                                </Text>
+                            </View>
+                        </View>
+                        <View className="bg-white p-2.5 rounded-full shadow-sm">
+                            <ChevronRight size={18} color={primaryColor} strokeWidth={3} />
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -162,12 +199,12 @@ const Home: React.FC = ({ navigation }: any) => {
                     {quickActions.map((action) => {
                         const Icon = action.icon;
                         return (
-                            <TouchableOpacity 
-                                key={action.id} 
+                            <TouchableOpacity
+                                key={action.id}
                                 activeOpacity={0.7}
                                 className="items-center"
                                 onPress={() => {
-                                    if(action.route === 'Activity' || action.route === 'Profile' || action.route === 'Wallet') {
+                                    if (action.route === 'Activity' || action.route === 'Profile' || action.route === 'Wallet') {
                                         navigation.navigate(action.route);
                                     }
                                 }}
@@ -208,6 +245,12 @@ const Home: React.FC = ({ navigation }: any) => {
                 </View>
 
             </ScrollView>
+
+            <MarketRatesModal
+                visible={showRatesModal}
+                onClose={() => setShowRatesModal(false)}
+                accentColor={primaryColor}
+            />
         </View>
     )
 }

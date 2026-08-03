@@ -1,13 +1,14 @@
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, Linking, Platform, StatusBar } from 'react-native'
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, Linking, Platform, StatusBar, TextInput } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../../store/store'
-import { acceptOrder, updatecustomerLocation, setRideStatus, resetRide, updatecollectorLocation, RaddiItem } from '../../store/slices/rideSlice'
+import { acceptOrder, updatecustomerLocation, setRideStatus, resetRide, updatecollectorLocation, RaddiItem, completeRide } from '../../store/slices/rideSlice'
 import LiveMap from '../../components/LiveMap'
 import { getCurrentLocation, getLocationPermission } from '../../utils/getPermissions'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
-import { MapPin, Navigation, CheckCircle, XCircle, Package, User, DollarSign, FileText, Smartphone, Boxes, Wine, Layers, Truck } from 'lucide-react-native'
+import { MapPin, Navigation, CheckCircle, XCircle, Package, User, DollarSign, FileText, Smartphone, Boxes, Wine, Layers, Truck, MessageSquare, Send, Tag, X } from 'lucide-react-native'
+import { useNavigation } from '@react-navigation/native'
 
 const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
 
@@ -26,6 +27,7 @@ interface IncomingPickupRequest {
 
 const CollectorRideScreen = () => {
     const dispatch = useDispatch();
+    const navigation = useNavigation<any>();
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; name?: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
     const rideState = useSelector((state: RootState) => state.ride);
@@ -34,6 +36,11 @@ const CollectorRideScreen = () => {
     const [locating, setLocating] = useState(false);
     const [incomingRequest, setIncomingRequest] = useState<IncomingPickupRequest | null>(null);
     const [showRequestModal, setShowRequestModal] = useState(false);
+
+    // Bidding states
+    const [customBidAmount, setCustomBidAmount] = useState('');
+    const [counterOfferData, setCounterOfferData] = useState<any>(null);
+    const [showCounterModal, setShowCounterModal] = useState(false);
 
     const categories: { id: RaddiItem['category']; label: string; icon: any; color: string }[] = [
         { id: 'paper', label: 'Kaghaz (Paper)', icon: FileText, color: '#3b82f6' },
@@ -107,7 +114,35 @@ const CollectorRideScreen = () => {
         socketService.on('newRideOrder', (data: any) => {
             setIncomingRequest(data);
             setShowRequestModal(true);
-            Toast.show({ type: ALERT_TYPE.INFO, title: 'Nayi Request Aagayi!', textBody: `${data.customerName} ko raddi bechni hai.` });
+            Toast.show({ type: ALERT_TYPE.INFO, title: 'Nayi Request Aagayi!', textBody: `${data.customerName || 'Customer'} ko raddi bechni hai.` });
+        });
+
+        socketService.on('newOrderAvailable', (data: any) => {
+            setIncomingRequest(data);
+            setShowRequestModal(true);
+            Toast.show({ type: ALERT_TYPE.INFO, title: 'Naya Order Available!', textBody: `${data.pickupAddress} par naya order.` });
+        });
+
+        socketService.on('bidPlaced', (data: any) => {
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Boli Lag Gayi!', textBody: 'Customer ko aapki boli bhej di gayi hai.' });
+        });
+
+        socketService.on('bidAccepted', (data: any) => {
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Boli Manzoor!', textBody: 'Customer ne aapki boli qabool kar li hai!' });
+            dispatch(setRideStatus('accepted'));
+            setShowRequestModal(false);
+        });
+
+        socketService.on('bidCountered', (data: any) => {
+            setCounterOfferData(data);
+            setShowCounterModal(true);
+            Toast.show({ type: ALERT_TYPE.INFO, title: 'Counter Offer Aagayi!', textBody: `${data.customerName || 'Customer'} ne Rs ${data.counterAmount} ki counter offer ki hai.` });
+        });
+
+        socketService.on('orderCompletedConfirmed', (data: any) => {
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Order Mukammal!', textBody: `Rs ${data.finalPrice} aapke batwe se muntaqil kar diye gaye hain.` });
+            dispatch(completeRide({ price: data.finalPrice || 0 }));
+            setTimeout(() => { dispatch(resetRide()); }, 2000);
         });
 
         socketService.on('requestCancelled', () => {
@@ -118,6 +153,11 @@ const CollectorRideScreen = () => {
 
         return () => {
             socketService.off('newRideOrder');
+            socketService.off('newOrderAvailable');
+            socketService.off('bidPlaced');
+            socketService.off('bidAccepted');
+            socketService.off('bidCountered');
+            socketService.off('orderCompletedConfirmed');
             socketService.off('requestCancelled');
         };
     }, []);
@@ -163,6 +203,46 @@ const CollectorRideScreen = () => {
         }
     };
 
+    const handlePlaceBid = () => {
+        if (!incomingRequest || !customBidAmount) return;
+        if (!isConnected) {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Offline', textBody: 'Internet connection check karein.' });
+            return;
+        }
+
+        socketService.emit('placeBid', {
+            orderId: Number(incomingRequest.orderId),
+            collectorId: Number(userdata?.id) || userdata?.id,
+            bidAmount: parseFloat(customBidAmount),
+            note: 'Fauri pickup kar sakta hoon',
+        });
+
+        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Boli Bhej Di!', textBody: `Rs ${customBidAmount} ki boli bhej di gayi hai.` });
+        setShowRequestModal(false);
+        setCustomBidAmount('');
+    };
+
+    const handleAcceptCounterOffer = () => {
+        if (!counterOfferData || !isConnected) return;
+        socketService.emit('acceptCounter', {
+            orderId: counterOfferData.orderId,
+            bidId: counterOfferData.bidId,
+        });
+        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Counter Manzoor!', textBody: 'Aapne counter offer qabool kar li hai.' });
+        dispatch(setRideStatus('accepted'));
+        setShowCounterModal(false);
+    };
+
+    const handleRejectCounterOffer = () => {
+        if (!counterOfferData || !isConnected) return;
+        socketService.emit('rejectCounter', {
+            orderId: counterOfferData.orderId,
+            bidId: counterOfferData.bidId,
+        });
+        Toast.show({ type: ALERT_TYPE.WARNING, title: 'Counter Radd', textBody: 'Counter offer radd kar di gayi.' });
+        setShowCounterModal(false);
+    };
+
     const handleStartNavigation = () => {
         if (!rideState.customerLocation) {
             Toast.show({ type: ALERT_TYPE.DANGER, title: 'Masla Hai', textBody: 'Customer ki location nahi mil rahi' });
@@ -192,12 +272,18 @@ const CollectorRideScreen = () => {
 
         Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Status Update', textBody: statusMessages[newStatus] || 'Status badal gaya' });
 
-        if (newStatus === 'completed') {
-            setTimeout(() => { dispatch(resetRide()); }, 2000);
-        }
-
-        if (isConnected && rideState.orderId) {
-            socketService.emit('updatePickupStatus', { orderId: rideState.orderId, status: newStatus });
+        if (isConnected) {
+            if (newStatus === 'on_way') {
+                socketService.emit('startPickup', { orderId: Number(rideState.orderId), collectorId: Number(userdata?.id) });
+            } else if (newStatus === 'completed') {
+                socketService.emit('completeOrder', {
+                    orderId: Number(rideState.orderId),
+                    collectorId: Number(userdata?.id),
+                    actualRaddiInKg: parseFloat(rideState.approximateWeight || '10'),
+                });
+            } else {
+                socketService.emit('updatePickupStatus', { orderId: rideState.orderId, status: newStatus });
+            }
         }
     };
 
@@ -431,28 +517,112 @@ const CollectorRideScreen = () => {
                                     )}
                                 </View>
 
-                                <View className="flex-row gap-3 mt-6">
-                                    <TouchableOpacity
-                                        activeOpacity={0.85}
-                                        className="flex-1 bg-[#f1f5f9] py-4 rounded-[24px] flex-row items-center justify-center border border-[#e2e8f0]"
-                                        onPress={handleRejectRequest}
-                                    >
-                                        <Text className="text-gray-700 font-black text-base tracking-wide">Inkaar Karein</Text>
-                                    </TouchableOpacity>
+                                 {/* Custom Bidding Input Section */}
+                                 <View className="mt-4 pt-4 border-t border-[#e2e8f0]">
+                                     <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 px-1">
+                                         Apni Boli (Custom Bid Price Rs)
+                                     </Text>
+                                     <View className="flex-row gap-2">
+                                         <TextInput
+                                             value={customBidAmount}
+                                             onChangeText={setCustomBidAmount}
+                                             placeholder="Misaal: 1350"
+                                             keyboardType="numeric"
+                                             className="flex-1 bg-white px-4 h-[50px] rounded-[18px] border border-[#e2e8f0] font-black text-gray-900 text-base"
+                                         />
+                                         <TouchableOpacity
+                                             onPress={handlePlaceBid}
+                                             disabled={!customBidAmount}
+                                             className={`px-5 rounded-[18px] justify-center flex-row items-center ${customBidAmount ? 'bg-amber-600' : 'bg-gray-200'}`}
+                                         >
+                                             <Tag size={16} color={customBidAmount ? '#ffffff' : '#94a3b8'} className="mr-1.5" />
+                                             <Text className={`font-black text-sm ${customBidAmount ? 'text-white' : 'text-gray-400'}`}>Boli Bhejein</Text>
+                                         </TouchableOpacity>
+                                     </View>
+                                 </View>
 
-                                    <TouchableOpacity
-                                        activeOpacity={0.85}
-                                        className="flex-1 bg-[#d97706] py-4 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-amber-600/30"
-                                        onPress={handleAcceptRequest}
-                                    >
-                                        <Text className="text-white font-black text-base tracking-wide">Qabool Karein</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </ScrollView>
+                                 <View className="flex-row gap-3 mt-6">
+                                     <TouchableOpacity
+                                         activeOpacity={0.85}
+                                         className="flex-1 bg-[#f1f5f9] py-4 rounded-[24px] flex-row items-center justify-center border border-[#e2e8f0]"
+                                         onPress={handleRejectRequest}
+                                     >
+                                         <Text className="text-gray-700 font-black text-base tracking-wide">Inkaar Karein</Text>
+                                     </TouchableOpacity>
+
+                                     <TouchableOpacity
+                                         activeOpacity={0.85}
+                                         className="flex-1 bg-[#d97706] py-4 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-amber-600/30"
+                                         onPress={handleAcceptRequest}
+                                     >
+                                         <Text className="text-white font-black text-base tracking-wide">Qabool Karein</Text>
+                                     </TouchableOpacity>
+                                 </View>
+                             </ScrollView>
                         )}
                     </View>
                 </View>
             </Modal>
+
+            {/* Counter Offer Modal */}
+            <Modal visible={showCounterModal} transparent animationType="slide" onRequestClose={() => setShowCounterModal(false)}>
+                <View className="flex-1 justify-end bg-black/60">
+                    <View className="bg-white rounded-t-[40px] p-6 pb-10 shadow-2xl">
+                        <View className="flex-row justify-between items-center mb-4">
+                            <Text className="text-2xl font-black text-gray-900">Customer Counter Offer!</Text>
+                            <TouchableOpacity onPress={() => setShowCounterModal(false)} className="p-2 bg-gray-100 rounded-full">
+                                <X size={20} color="#374151" strokeWidth={2.5} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {counterOfferData && (
+                            <View className="bg-[#fffbeb] p-5 rounded-[28px] border border-[#fde68a] mb-6">
+                                <Text className="text-xs font-bold text-amber-800 mb-2 uppercase tracking-wider">
+                                    {counterOfferData.customerName || 'Customer'} ne counter offer ki hai:
+                                </Text>
+                                <View className="flex-row items-baseline mb-2">
+                                    <Text className="font-black text-gray-900 text-3xl">Rs {counterOfferData.counterAmount}</Text>
+                                    <Text className="text-xs font-bold text-gray-500 ml-2">(Original: Rs {counterOfferData.originalBid})</Text>
+                                </View>
+                                <Text className="text-xs text-gray-600 font-medium leading-relaxed">
+                                    Kya aap is nayi qeemat par pickup karne ke liye tayyar hain?
+                                </Text>
+                            </View>
+                        )}
+
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                onPress={handleRejectCounterOffer}
+                                className="flex-1 bg-[#f1f5f9] py-4 rounded-[24px] items-center border border-[#e2e8f0]"
+                            >
+                                <Text className="font-black text-gray-700 text-base">Inkaar Karein</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={handleAcceptCounterOffer}
+                                className="flex-1 bg-[#d97706] py-4 rounded-[24px] items-center shadow-lg shadow-amber-600/30"
+                            >
+                                <Text className="font-black text-white text-base">Qabool Karein</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Floating Chat Button when order is active */}
+            {rideState.status !== 'idle' && (
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('Chat', {
+                        orderId: rideState.orderId,
+                        recipientName: rideState.customerName || 'Customer',
+                        recipientId: rideState.customerId,
+                    })}
+                    className="absolute bottom-28 right-5 bg-amber-600 p-4 rounded-full shadow-2xl z-40 flex-row items-center border border-white"
+                >
+                    <MessageSquare color="#ffffff" size={22} strokeWidth={2.5} />
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
