@@ -18,8 +18,7 @@ import { login } from '../../store/slices/authSlice'
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
-const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
-    const role = route?.params?.role || 'customer'
+const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
     const dispatch = useDispatch()
     const { mutateAsync, isPending } = useSubmit({ endpoint: 'auth/api/v1/login' })
 
@@ -28,10 +27,9 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
     const [showPassword, setShowPassword] = useState(false)
     const [focusedField, setFocusedField] = useState<string | null>(null)
 
-    const isCustomer = role === 'customer'
-    const accent = isCustomer ? '#059669' : '#d97706'
-    const accentLight = isCustomer ? '#ecfdf5' : '#fffbeb'
-    const accentDark = isCustomer ? '#047857' : '#b45309'
+    const accent = '#059669'
+    const accentLight = '#ecfdf5'
+    const accentDark = '#047857'
 
     const isFormValid = email && password
 
@@ -53,10 +51,8 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
         <View style={styles.root}>
             <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
 
-            {/* Top accent bar — same as InitialScreen */}
             <View style={[styles.topBar, { backgroundColor: accent }]} />
 
-            {/* Back button — floats above scroll */}
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => navigation.goBack()}
@@ -73,49 +69,40 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
             >
                 {/* Brand header */}
                 <View style={styles.brandRow}>
-                        <Image source={LogoImage} style={styles.logoImage} resizeMode="contain" />
+                    <Image source={LogoImage} style={styles.logoImage} resizeMode="contain" />
                     <View>
                         <Text style={styles.brandName}>RaddiGo</Text>
                         <Text style={[styles.brandUrdu, { color: accent }]}>بیچو۔ کماؤ۔ دہراؤ</Text>
-                    </View>
-                    <View style={[styles.roleBadge, { backgroundColor: accentLight }]}>
-                        <View style={[styles.roleDot, { backgroundColor: accent }]} />
-                        <Text style={[styles.roleText, { color: accentDark }]}>
-                            {isCustomer ? 'Seller' : 'Collector'}
-                        </Text>
                     </View>
                 </View>
 
                 {/* Hero text */}
                 <View style={styles.heroSection}>
-                    <Text style={styles.heroEyebrow}>WAPSI MARHABA</Text>
-                    <Text style={styles.heroTitle}>Apne account{'\n'}mein sign in karein</Text>
+                    <Text style={styles.heroEyebrow}>خوش آمدید • WELCOME BACK</Text>
+                    <Text style={styles.heroTitle}>Sign in to RaddiGo</Text>
                     <Text style={styles.heroSub}>
-                        {isCustomer
-                            ? 'Raddi becho, payment lo — seedha apne ghar se.'
-                            : 'Pickups dhundo, paisa kamao — apne schedule par.'}
+                        Apna email aur password darj kar ke login karein.
                     </Text>
                 </View>
 
                 {/* Form card */}
                 <View style={styles.card}>
-
                     {/* Email */}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Email Address</Text>
                         <View style={[
                             styles.inputWrap,
-                            focusedField === 'email' && { borderColor: accent, borderWidth: 2 }
+                            focusedField === 'email' && { borderColor: accent, backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
                         ]}>
                             <Mail
                                 size={18}
                                 color={focusedField === 'email' ? accent : '#94a3b8'}
-                                strokeWidth={2}
+                                strokeWidth={2.5}
                             />
                             <TextInput
                                 style={styles.input}
                                 placeholder="ali@example.com"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 value={email}
@@ -130,23 +117,23 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                     <View style={styles.fieldGroup}>
                         <View style={styles.labelRow}>
                             <Text style={styles.label}>Password</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { role })}>
+                            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                                 <Text style={[styles.forgotLink, { color: accent }]}>Bhool gaye?</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={[
                             styles.inputWrap,
-                            focusedField === 'password' && { borderColor: accent, borderWidth: 2 }
+                            focusedField === 'password' && { borderColor: accent, backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
                         ]}>
                             <Lock
                                 size={18}
                                 color={focusedField === 'password' ? accent : '#94a3b8'}
-                                strokeWidth={2}
+                                strokeWidth={2.5}
                             />
                             <TextInput
                                 style={styles.input}
                                 placeholder="••••••••"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor="#94a3b8"
                                 secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={setPassword}
@@ -167,9 +154,9 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                     {/* Trust badge */}
                     <View style={[styles.trustBadge, { backgroundColor: accentLight }]}>
-                        <ShieldCheck size={14} color={accent} strokeWidth={2.5} />
+                        <ShieldCheck size={15} color={accent} strokeWidth={2.5} />
                         <Text style={[styles.trustText, { color: accentDark }]}>
-                            256-bit encryption se protected
+                            256-bit secure SSL encryption
                         </Text>
                     </View>
 
@@ -177,19 +164,19 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                     <TouchableOpacity
                         onPress={Login}
                         disabled={isPending || !isFormValid}
-                        activeOpacity={0.85}
+                        activeOpacity={0.88}
                         style={[
                             styles.primaryBtn,
-                            { backgroundColor: isFormValid ? accent : '#e2e8f0' },
+                            { backgroundColor: isFormValid ? accent : '#cbd5e1' },
                         ]}
                     >
-                        <Text style={[styles.primaryBtnText, !isFormValid && { color: '#94a3b8' }]}>
-                            {isPending ? 'Sign in ho raha hai...' : 'Sign In karein'}
+                        <Text style={[styles.primaryBtnText, !isFormValid && { color: '#64748b' }]}>
+                            {isPending ? 'Sign in ho raha hai...' : 'Sign In Karein'}
                         </Text>
                         {isPending
                             ? <ActivityIndicator color="#fff" size="small" />
                             : <View style={styles.arrowCircle}>
-                                <ArrowRight size={18} color={isFormValid ? '#fff' : '#94a3b8'} strokeWidth={3} />
+                                <ArrowRight size={18} color={isFormValid ? '#fff' : '#64748b'} strokeWidth={3} />
                               </View>
                         }
                     </TouchableOpacity>
@@ -197,13 +184,13 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                 {/* Signup nudge */}
                 <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => navigation.navigate('SignUp', { role })}
+                    activeOpacity={0.75}
+                    onPress={() => navigation.navigate('SignUp')}
                     style={styles.nudgeBtn}
                 >
                     <Text style={styles.nudgeText}>
-                        Account nahi hai?{' '}
-                        <Text style={[styles.nudgeLink, { color: accent }]}>Sign Up karein</Text>
+                        Naye user hain?{' '}
+                        <Text style={[styles.nudgeLink, { color: accent }]}>Naya Account Banayein</Text>
                     </Text>
                 </TouchableOpacity>
 
@@ -216,11 +203,11 @@ const SignIn: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                 {/* Social buttons */}
                 <View style={styles.socialRow}>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.socialBtn}>
+                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
                         <GoogleIcon primaryColor="#EA4335" secondaryColor="#4285F4" tertiaryColor="#FBBC05" quaternaryColor="#34A853" />
                         <Text style={styles.socialBtnText}>Google</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.socialBtn}>
+                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
                         <FacebookIcon primaryColor="#1877F2" />
                         <Text style={styles.socialBtnText}>Facebook</Text>
                     </TouchableOpacity>

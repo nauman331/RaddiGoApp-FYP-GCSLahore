@@ -16,12 +16,13 @@ import LogoImage from '../../assets/half-logo.jpeg'   // <-- import logo
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
-const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
-    const role = route?.params?.role || 'customer'
+const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
+    const initialRole = route?.params?.role || 'customer'
+    const [role, setRole] = useState<'customer' | 'collector'>(initialRole)
     const { mutateAsync, isPending } = useSubmit({ endpoint: 'auth/api/v1/register' })
 
     const [formData, setFormData] = useState({
-        username: '', email: '', phone: '', password: '', role,
+        username: '', email: '', phone: '', password: '', role: initialRole,
     })
     const [showPassword, setShowPassword] = useState(false)
     const [focusedField, setFocusedField] = useState<string | null>(null)
@@ -30,6 +31,11 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
     const accent = isCustomer ? '#059669' : '#d97706'
     const accentLight = isCustomer ? '#ecfdf5' : '#fffbeb'
     const accentDark = isCustomer ? '#047857' : '#b45309'
+
+    const handleRoleSwitch = (newRole: 'customer' | 'collector') => {
+        setRole(newRole)
+        setFormData(prev => ({ ...prev, role: newRole }))
+    }
 
     const handleChange = (field: string, value: string) => {
         if (field === 'phone') {
@@ -52,7 +58,7 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
             return
         }
         try {
-            await mutateAsync({ ...formData, phone: `+92${formData.phone}` })
+            await mutateAsync({ ...formData, role, phone: `+92${formData.phone}` })
             Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'OTP Bhej Diya!', textBody: 'Apna phone/email check karein.' })
             navigation.navigate('VerifyOTP', { email: formData.email, phone: `+92${formData.phone}`, role })
         } catch (error: any) {
@@ -89,40 +95,60 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
             >
                 {/* Brand header */}
                 <View style={styles.brandRow}>
-                        <Image source={LogoImage} style={styles.logoImage} resizeMode="contain" />
+                    <Image source={LogoImage} style={styles.logoImage} resizeMode="contain" />
                     <View>
                         <Text style={styles.brandName}>RaddiGo</Text>
                         <Text style={[styles.brandUrdu, { color: accent }]}>بیچو۔ کماؤ۔ دہراؤ</Text>
                     </View>
-                    <View style={[styles.roleBadge, { backgroundColor: accentLight }]}>
-                        <View style={[styles.roleDot, { backgroundColor: accent }]} />
-                        <Text style={[styles.roleText, { color: accentDark }]}>
-                            {isCustomer ? 'Seller' : 'Collector'}
+                </View>
+
+                {/* Role Switcher Pill */}
+                <View style={styles.roleToggleRow}>
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => handleRoleSwitch('customer')}
+                        style={[
+                            styles.roleToggleBtn,
+                            isCustomer && { backgroundColor: '#059669' }
+                        ]}
+                    >
+                        <Text style={[styles.roleToggleText, isCustomer && { color: '#ffffff' }]}>
+                            Raddi Bechni Hai (Seller)
                         </Text>
-                    </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => handleRoleSwitch('collector')}
+                        style={[
+                            styles.roleToggleBtn,
+                            !isCustomer && { backgroundColor: '#d97706' }
+                        ]}
+                    >
+                        <Text style={[styles.roleToggleText, !isCustomer && { color: '#ffffff' }]}>
+                            Collector Hoon (Buyer)
+                        </Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Hero text */}
                 <View style={styles.heroSection}>
-                    <Text style={styles.heroEyebrow}>
-                        {isCustomer ? 'SELLERS KE LIYE' : 'COLLECTORS KE LIYE'}
-                    </Text>
                     <Text style={styles.heroTitle}>
-                        Naya {isCustomer ? 'Seller' : 'Collector'}{'\n'}account banayein
+                        Naya {isCustomer ? 'Seller' : 'Collector'} Account
                     </Text>
                     <Text style={styles.heroSub}>
                         {isCustomer
-                            ? 'Ghar baithe raddi becho, same day payment pao.'
-                            : 'Apne ilaaké mein pickups lo, daily paisa kamao.'}
+                            ? 'گھر بیٹھے ردی بیچیں اور نقد رقم پائیں۔'
+                            : 'اپنے علاقے میں پک اپس کریں اور روزانہ کمائیں۔'}
                     </Text>
                 </View>
 
-                {/* Perks strip — same as InitialScreen pills */}
+                {/* Perks strip */}
                 <View style={[styles.perksStrip, { backgroundColor: '#ffffff', borderColor: '#f1f5f9' }]}>
                     {[
-                        { emoji: '⚡', text: 'Free to join' },
-                        { emoji: '🔒', text: 'Secure & safe' },
-                        { emoji: '💸', text: 'Fast payments' },
+                        { emoji: '⚡', text: 'Free Registration' },
+                        { emoji: '🔒', text: '100% Secure' },
+                        { emoji: '💸', text: 'Fast Payouts' },
                     ].map((p, i) => (
                         <React.Fragment key={i}>
                             {i > 0 && <View style={styles.perkDivider} />}
@@ -136,16 +162,19 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                 {/* Form card */}
                 <View style={styles.card}>
-
                     {/* Username */}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Pura Naam</Text>
-                        <View style={[styles.inputWrap, inputBorderStyle('username')]}>
-                            <User size={18} color={iconColor('username')} strokeWidth={2} />
+                        <View style={[
+                            styles.inputWrap,
+                            inputBorderStyle('username'),
+                            focusedField === 'username' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                        ]}>
+                            <User size={18} color={iconColor('username')} strokeWidth={2.5} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="Jaise: Ali Khan"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor="#94a3b8"
                                 autoCapitalize="words"
                                 value={formData.username}
                                 onChangeText={v => handleChange('username', v)}
@@ -158,12 +187,16 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                     {/* Email */}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Email Address</Text>
-                        <View style={[styles.inputWrap, inputBorderStyle('email')]}>
-                            <Mail size={18} color={iconColor('email')} strokeWidth={2} />
+                        <View style={[
+                            styles.inputWrap,
+                            inputBorderStyle('email'),
+                            focusedField === 'email' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                        ]}>
+                            <Mail size={18} color={iconColor('email')} strokeWidth={2.5} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="ali@example.com"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 value={formData.email}
@@ -177,14 +210,18 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                     {/* Phone */}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Mobile Number</Text>
-                        <View style={[styles.inputWrap, inputBorderStyle('phone')]}>
+                        <View style={[
+                            styles.inputWrap,
+                            inputBorderStyle('phone'),
+                            focusedField === 'phone' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                        ]}>
                             <Text style={{ fontSize: 17 }}>🇵🇰</Text>
                             <Text style={styles.dialCode}>+92</Text>
                             <View style={styles.phoneDivider} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="300 1234567"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="phone-pad"
                                 maxLength={10}
                                 value={formData.phone}
@@ -198,12 +235,16 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                     {/* Password */}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.label}>Password</Text>
-                        <View style={[styles.inputWrap, inputBorderStyle('password')]}>
-                            <Lock size={18} color={iconColor('password')} strokeWidth={2} />
+                        <View style={[
+                            styles.inputWrap,
+                            inputBorderStyle('password'),
+                            focusedField === 'password' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                        ]}>
+                            <Lock size={18} color={iconColor('password')} strokeWidth={2.5} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="Kam az kam 8 huroof"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor="#94a3b8"
                                 secureTextEntry={!showPassword}
                                 value={formData.password}
                                 onChangeText={v => handleChange('password', v)}
@@ -224,9 +265,9 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                     {/* Trust badge */}
                     <View style={[styles.trustBadge, { backgroundColor: accentLight }]}>
-                        <ShieldCheck size={14} color={accent} strokeWidth={2.5} />
+                        <ShieldCheck size={15} color={accent} strokeWidth={2.5} />
                         <Text style={[styles.trustText, { color: accentDark }]}>
-                            Aapka data 256-bit encryption se protected hai
+                            Aapka data 256-bit SSL encryption se protected hai
                         </Text>
                     </View>
 
@@ -234,19 +275,19 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
                     <TouchableOpacity
                         onPress={Register}
                         disabled={isPending || !isFormValid}
-                        activeOpacity={0.85}
+                        activeOpacity={0.88}
                         style={[
                             styles.primaryBtn,
-                            { backgroundColor: isFormValid ? accent : '#e2e8f0' },
+                            { backgroundColor: isFormValid ? accent : '#cbd5e1' },
                         ]}
                     >
-                        <Text style={[styles.primaryBtnText, !isFormValid && { color: '#94a3b8' }]}>
+                        <Text style={[styles.primaryBtnText, !isFormValid && { color: '#64748b' }]}>
                             {isPending ? 'Account ban raha hai...' : 'Account Banayein'}
                         </Text>
                         {isPending
                             ? <ActivityIndicator color="#fff" size="small" />
                             : <View style={styles.arrowCircle}>
-                                <ArrowRight size={18} color={isFormValid ? '#fff' : '#94a3b8'} strokeWidth={3} />
+                                <ArrowRight size={18} color={isFormValid ? '#fff' : '#64748b'} strokeWidth={3} />
                               </View>
                         }
                     </TouchableOpacity>
@@ -254,7 +295,7 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                 {/* Login nudge */}
                 <TouchableOpacity
-                    activeOpacity={0.7}
+                    activeOpacity={0.75}
                     onPress={() => navigation.navigate('SignIn', { role })}
                     style={styles.nudgeBtn}
                 >
@@ -273,11 +314,11 @@ const SignUp: React.FC<{ navigation: any; route: any }> = ({ navigation, route }
 
                 {/* Social */}
                 <View style={styles.socialRow}>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.socialBtn}>
+                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
                         <GoogleIcon primaryColor="#EA4335" secondaryColor="#4285F4" tertiaryColor="#FBBC05" quaternaryColor="#34A853" />
                         <Text style={styles.socialBtnText}>Google</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.socialBtn}>
+                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
                         <FacebookIcon primaryColor="#1877F2" />
                         <Text style={styles.socialBtnText}>Facebook</Text>
                     </TouchableOpacity>
@@ -319,6 +360,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 12,
         paddingTop: 48,
+    },
+    roleToggleRow: {
+        flexDirection: 'row',
+        backgroundColor: '#e2e8f0',
+        borderRadius: 18,
+        padding: 4,
+        gap: 4,
+        marginTop: 6,
+    },
+    roleToggleBtn: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 14,
+    },
+    roleToggleText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#475569',
     },
     logoImage: {
            width: 44, height: 44,
