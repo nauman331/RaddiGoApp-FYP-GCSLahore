@@ -96,55 +96,26 @@ export const getLocationPermission = async () => {
     }
 }
 
-export const getCurrentLocation = () => {
-    const tryGet = (opts: { enableHighAccuracy: boolean; timeout: number; maximumAge?: number }) => new Promise((resolve, reject) => {
-        Geolocation.getCurrentPosition(
-            (position) => resolve(position),
-            (error) => reject(error),
-            opts
-        );
-    });
+export const getCurrentLocation = async (): Promise<any> => {
+    const tryGet = (opts: { enableHighAccuracy: boolean; timeout: number; maximumAge?: number }) =>
+        new Promise((resolve, reject) => {
+            Geolocation.getCurrentPosition(
+                (position) => resolve(position),
+                (error) => reject(error),
+                opts
+            );
+        });
 
-    return tryGet({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }).catch(async (err1) => {
-        console.warn('First location attempt failed, retrying with longer timeout', err1);
+    // Attempt 1: Fast Network/Cell location + Cached location (Instant <200ms on Android)
+    try {
+        return await tryGet({ enableHighAccuracy: false, timeout: 3000, maximumAge: 120000 });
+    } catch (err1) {
+        // Attempt 2: High accuracy GPS provider (if network fix failed)
         try {
-            return await tryGet({ enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 });
+            return await tryGet({ enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 });
         } catch (err2) {
-            console.warn('Second location attempt failed, trying low-accuracy fallback', err2);
-            try {
-                return await tryGet({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
-            } catch (err3) {
-                console.warn('Low-accuracy attempt failed, trying watchPosition as last resort', err3);
-                 return new Promise((resolve, reject) => {
-                    let didRespond = false;
-                    const watchId = Geolocation.watchPosition(
-                        (pos) => {
-                            if (!didRespond) {
-                                didRespond = true;
-                                Geolocation.clearWatch(watchId);
-                                resolve(pos);
-                            }
-                        },
-                        (err) => {
-                            if (!didRespond) {
-                                didRespond = true;
-                                Geolocation.clearWatch(watchId);
-                                reject(err);
-                            }
-                        },
-                        { enableHighAccuracy: false, distanceFilter: 0, interval: 5000, fastestInterval: 2000 }
-                    );
-
-                    // safety timeout
-                    setTimeout(() => {
-                        if (!didRespond) {
-                            didRespond = true;
-                            Geolocation.clearWatch(watchId);
-                            reject({ code: 3, message: 'Location request timed out (watch fallback).' });
-                        }
-                    }, 20000);
-                });
-            }
+            // Attempt 3: Any cached position within last 10 minutes
+            return await tryGet({ enableHighAccuracy: false, timeout: 2000, maximumAge: 600000 });
         }
-    });
+    }
 };

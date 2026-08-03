@@ -65,7 +65,7 @@ const Header: React.FC = () => {
                 }
 
                 const locationPromise = getCurrentLocation();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
                 
                 const position = await Promise.race([locationPromise, timeoutPromise]) as any;
                 const { latitude, longitude } = position.coords;

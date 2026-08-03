@@ -8,7 +8,9 @@ import { getCurrentLocation, getLocationPermission } from '../../utils/getPermis
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
 import { MapPin, Navigation, CheckCircle, XCircle, Package, User, DollarSign, FileText, Smartphone, Boxes, Wine, Layers, Truck, MessageSquare, Send, Tag, X } from 'lucide-react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { useCallback } from 'react'
+import { useFetch } from '../../apiHooks/useFetch'
 
 const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
 
@@ -65,7 +67,7 @@ const CollectorRideScreen = () => {
                 }
 
                 const locationPromise = getCurrentLocation();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
                 
                 const position = await Promise.race([locationPromise, timeoutPromise]) as any;
                 const { latitude, longitude } = position.coords;
@@ -110,18 +112,63 @@ const CollectorRideScreen = () => {
         return () => { if (interval !== null) clearInterval(interval as any); };
     }, [isConnected, currentLocation, userdata?.id, rideState.orderId]);
 
-    useEffect(() => {
-        socketService.on('newRideOrder', (data: any) => {
-            setIncomingRequest(data);
-            setShowRequestModal(true);
-            Toast.show({ type: ALERT_TYPE.INFO, title: 'Nayi Request Aagayi!', textBody: `${data.customerName || 'Customer'} ko raddi bechni hai.` });
-        });
+    // Fetch open/available orders from REST API for collectors logged in after order creation
+    const { data: availableData, refetch: refetchAvailable } = useFetch({
+        endpoint: 'order/api/v1/available?page=1&limit=10',
+        isAuth: true,
+    });
 
-        socketService.on('newOrderAvailable', (data: any) => {
-            setIncomingRequest(data);
+    useFocusEffect(
+        useCallback(() => {
+            if (rideState.status === 'idle') {
+                refetchAvailable();
+            }
+        }, [rideState.status, refetchAvailable])
+    );
+
+    useEffect(() => {
+        if (rideState.status === 'idle' && !incomingRequest) {
+            const rawOrders = availableData?.orders ?? availableData?.data ?? availableData;
+            const orders = Array.isArray(rawOrders) ? rawOrders : [];
+            if (orders.length > 0) {
+                const firstOrder = orders[0];
+                const mapped: IncomingPickupRequest = {
+                    orderId: String(firstOrder.id),
+                    customerId: String(firstOrder.customerId || firstOrder.customer_id || firstOrder.user_id || '1'),
+                    customerName: firstOrder.customerName || firstOrder.customer_name || 'Customer',
+                    customerLatitude: Number(firstOrder.pickupLatitude || firstOrder.pickup_latitude || 31.5204),
+                    customerLongitude: Number(firstOrder.pickupLongitude || firstOrder.pickup_longitude || 74.3587),
+                    customerAddress: firstOrder.pickupAddress || firstOrder.pickup_address || 'Lahore',
+                    totalWeight: String(firstOrder.approximateRaddiInKg || firstOrder.weight || '10'),
+                    estimatedEarnings: Number(firstOrder.expectedPrice || 0),
+                };
+                setIncomingRequest(mapped);
+                setShowRequestModal(true);
+            }
+        }
+    }, [availableData, rideState.status, incomingRequest]);
+
+    useEffect(() => {
+        const handleNewOrder = (data: any) => {
+            if (!data) return;
+            const mapped: IncomingPickupRequest = {
+                orderId: String(data.orderId || data.id || Date.now()),
+                customerId: String(data.customerId || data.customer_id || '1'),
+                customerName: data.customerName || data.customer_name || 'Customer',
+                customerLatitude: Number(data.pickupLatitude || data.customerLatitude || 31.5204),
+                customerLongitude: Number(data.pickupLongitude || data.customerLongitude || 74.3587),
+                customerAddress: data.pickupAddress || data.customerAddress || 'Lahore',
+                totalWeight: String(data.approximateRaddiInKg || data.totalWeight || '10'),
+                estimatedEarnings: Number(data.expectedPrice || data.estimatedEarnings || 0),
+            };
+            setIncomingRequest(mapped);
             setShowRequestModal(true);
-            Toast.show({ type: ALERT_TYPE.INFO, title: 'Naya Order Available!', textBody: `${data.pickupAddress} par naya order.` });
-        });
+            Toast.show({ type: ALERT_TYPE.INFO, title: 'Nayi Request Aagayi!', textBody: `${mapped.customerName} ko raddi bechni hai.` });
+        };
+
+        socketService.on('newRideOrder', handleNewOrder);
+        socketService.on('newOrderAvailable', handleNewOrder);
+        socketService.on('new_order', handleNewOrder);
 
         socketService.on('bidPlaced', (data: any) => {
             Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Boli Lag Gayi!', textBody: 'Customer ko aapki boli bhej di gayi hai.' });
@@ -154,6 +201,7 @@ const CollectorRideScreen = () => {
         return () => {
             socketService.off('newRideOrder');
             socketService.off('newOrderAvailable');
+            socketService.off('new_order');
             socketService.off('bidPlaced');
             socketService.off('bidAccepted');
             socketService.off('bidCountered');
