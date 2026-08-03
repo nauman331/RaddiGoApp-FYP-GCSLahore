@@ -9,11 +9,11 @@ import { getCurrentLocation, getLocationPermission } from '../../utils/getPermis
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
 import { MapPin, Package, User, FileText, Smartphone, Boxes, Wine, Layers, Plus, Trash2, Send, MessageSquare, DollarSign, RefreshCw, CheckCircle2, X } from 'lucide-react-native'
+import { useSubmit } from '../../apiHooks/useSubmit'
 import { useFetch } from '../../apiHooks/useFetch'
 import { useNavigation } from '@react-navigation/native'
 import { BidItem } from '../../types/integration'
 
-const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
 
 interface Nearbycollector {
     id: string;
@@ -86,9 +86,7 @@ const CustomerRideScreen = () => {
                 setLocating(true);
                 const granted = await getLocationPermission();
                 if (!granted) {
-                    Toast.show({ type: ALERT_TYPE.WARNING, title: 'Permission Chahiye', textBody: 'Location ki ijazat zaroori hai.' });
-                    setCurrentLocation(FALLBACK_LOCATION);
-                    dispatch(updatecustomerLocation(FALLBACK_LOCATION));
+                    Toast.show({ type: ALERT_TYPE.WARNING, title: 'Permission Chahiye', textBody: 'Location permission settings mein on karein.' });
                     return;
                 }
 
@@ -102,9 +100,7 @@ const CustomerRideScreen = () => {
                 setCurrentLocation(location);
                 dispatch(updatecustomerLocation(location));
             } catch (error: any) {
-                console.log('Fast Location Fallback Triggered');
-                setCurrentLocation(FALLBACK_LOCATION);
-                dispatch(updatecustomerLocation(FALLBACK_LOCATION));
+                Toast.show({ type: ALERT_TYPE.WARNING, title: 'Location Nahi Mili', textBody: 'GPS on karein aur dobara try karein.' });
             } finally {
                 setLocating(false);
             }
@@ -253,43 +249,66 @@ const CustomerRideScreen = () => {
 
     const getTotalWeight = () => items.reduce((sum, item) => sum + parseFloat(item.weight || '0'), 0).toFixed(1);
 
-    const handleSendPickupRequest = () => {
+    const getTotalPrice = () => {
+        const total = items.reduce((sum, item) => {
+            const cat = apiCategories.find((c: any) => String(c.id) === String(item.category) || c.nameEng?.toLowerCase() === String(item.category).toLowerCase());
+            const pricePerKg = Number(cat?.todayPrice || 50);
+            const weight = parseFloat(item.weight || '0');
+            return sum + (weight * pricePerKg);
+        }, 0);
+        return total > 0 ? total : parseFloat(getTotalWeight()) * 50;
+    };
+
+    const handleSendPickupRequest = async () => {
         if (items.length === 0) {
             Toast.show({ type: ALERT_TYPE.DANGER, title: 'Nakam', textBody: 'Kam az kam ek saman shamil karein.' });
             return;
         }
+        if (!currentLocation) {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Location Chahiye', textBody: 'Pehle apni location on karein.' });
+            return;
+        }
+        if (!isConnected) {
+            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Internet Masla', textBody: 'Aap is waqt offline hain.' });
+            return;
+        }
 
         const totalWeight = getTotalWeight();
-        const tempOrderId = `temp-${Date.now()}`;
-        
-        dispatch(createOrder({
-            orderId: tempOrderId,
-            pickupLocation: currentLocation ?? null as any,
+        const calculatedPrice = getTotalPrice();
+
+        // Emit 'createOrder' (correct event per backend spec §6.3) — backend saves to DB + notifies collectors
+        const payload: any = {
+            customerId: Number(userdata?.id) || userdata?.id,
+            customerName: userdata?.name || 'Customer',
+            pickupLatitude: currentLocation.latitude,
+            pickupLongitude: currentLocation.longitude,
             pickupAddress: selectedcollector?.address || '',
-            approximateWeight: totalWeight,
-            collectorId: selectedcollector?.id ?? null as any,
+            approximateRaddiInKg: parseFloat(totalWeight),
+            expectedPrice: calculatedPrice,
             items,
-        }));
+        };
+        if (selectedcollector?.id) payload.collectorId = selectedcollector.id;
+
+        socketService.emit('createOrder', payload);
+
+        // Listen once for orderCreated confirmation to get real orderId from DB
+        socketService.on('orderCreated', (res: any) => {
+            const realOrderId = String(res?.orderId || res?.data?.orderId || `temp-${Date.now()}`);
+            dispatch(createOrder({
+                orderId: realOrderId,
+                pickupLocation: currentLocation,
+                pickupAddress: selectedcollector?.address || '',
+                approximateWeight: totalWeight,
+                collectorId: selectedcollector?.id ?? null as any,
+                items,
+            }));
+            socketService.off('orderCreated');
+            Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Order Ho Gaya!', textBody: res?.message || 'Collectors ko notify kar diya gaya.' });
+        });
 
         bottomSheetRef.current?.close?.();
         setItems([]);
         setSelectedcollector(null);
-
-        if (isConnected) {
-            const payload: any = {
-                customerId: Number(userdata?.id) || userdata?.id,
-                customerName: userdata?.name || 'Customer',
-                pickupLatitude: currentLocation?.latitude,
-                pickupLongitude: currentLocation?.longitude,
-                pickupAddress: selectedcollector?.address || '',
-                approximateRaddiInKg: totalWeight,
-                items,
-            };
-            if (selectedcollector?.id) payload.collectorId = selectedcollector.id;
-            socketService.emit('makeRaddiOrder', payload);
-        } else {
-            Toast.show({ type: ALERT_TYPE.WARNING, title: 'Internet Masla', textBody: 'Aap is waqt offline hain.' });
-        }
     };
 
     const handleAcceptBid = (bid: BidItem) => {
@@ -342,6 +361,11 @@ const CustomerRideScreen = () => {
                     dropoffLocation={null}
                     nearbyUsers={nearbycollectors}
                     acceptanceRadius={ACCEPTANCE_RADIUS_METERS}
+                    onLocationPicked={(coord) => {
+                        setCurrentLocation(coord);
+                        dispatch(updatecustomerLocation(coord));
+                        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Location Set!', textBody: 'Aapki jagah map par set ho gayi.' });
+                    }}
                 />
 
                 {locating && (

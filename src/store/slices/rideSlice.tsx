@@ -102,12 +102,14 @@ const rideSlice = createSlice({
             state.items = action.payload.items || [];
         },
         acceptOrder(state, action: PayloadAction<{
+            orderId?: string;
             customerId: string;
             customerName: string;
             customerLocation: Location;
             estimatedTime: number;
         }>) {
             state.status = 'accepted';
+            if (action.payload.orderId) state.orderId = action.payload.orderId;
             state.customerId = action.payload.customerId;
             state.customerName = action.payload.customerName;
             state.customerLocation = action.payload.customerLocation;

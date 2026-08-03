@@ -22,6 +22,9 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
     const insets = useSafeAreaInsets();
     const { orderId, recipientName, recipientId } = route.params || {};
 
+    const rideState = useSelector((state: RootState) => state.ride);
+    const activeOrderId = orderId || rideState.orderId;
+
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: number | string; username?: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
 
@@ -40,16 +43,24 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
     const flatListRef = useRef<FlatList>(null);
 
     useEffect(() => {
-        if (!orderId) return;
+        if (!activeOrderId) {
+            setLoading(false);
+            return;
+        }
+
+        // Safety fallback: turn off loading spinner after 2 seconds if socket response is slow
+        const timer = setTimeout(() => {
+            setLoading(false);
+        }, 2000);
 
         // 1. Join Chat Room
-        socketService.emit('joinChat', { orderId: Number(orderId), userId: myUserId });
+        socketService.emit('joinChat', { orderId: Number(activeOrderId), userId: myUserId });
 
         // 2. Request Chat History
-        socketService.emit('getChatHistory', { orderId: Number(orderId), userId: myUserId });
+        socketService.emit('getChatHistory', { orderId: Number(activeOrderId), userId: myUserId });
 
         // 3. Mark messages read
-        socketService.emit('markRead', { orderId: Number(orderId), readerId: myUserId });
+        socketService.emit('markRead', { orderId: Number(activeOrderId), readerId: myUserId });
 
         // Event listeners
         const handleChatJoined = (data: any) => {
@@ -64,12 +75,12 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
         };
 
         const handleNewMessage = (msg: ChatMessage) => {
-            if (msg.orderId === Number(orderId) || (msg as any).order_id === Number(orderId)) {
+            if (msg.orderId === Number(activeOrderId) || (msg as any).order_id === Number(activeOrderId)) {
                 setMessages(prev => {
                     if (prev.some(m => m.id === msg.id)) return prev;
                     return [...prev, msg];
                 });
-                socketService.emit('markRead', { orderId: Number(orderId), readerId: myUserId });
+                socketService.emit('markRead', { orderId: Number(activeOrderId), readerId: myUserId });
             }
         };
 
@@ -99,6 +110,7 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
         socketService.on('messagesMarkedRead', handleMessagesMarkedRead);
 
         return () => {
+            clearTimeout(timer);
             socketService.off('chatJoined', handleChatJoined);
             socketService.off('chatHistory', handleChatHistory);
             socketService.off('newMessage', handleNewMessage);
@@ -106,26 +118,26 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
             socketService.off('userStoppedTyping', handleUserStoppedTyping);
             socketService.off('messagesMarkedRead', handleMessagesMarkedRead);
         };
-    }, [orderId, myUserId]);
+    }, [activeOrderId, myUserId]);
 
     const handleInputChange = (text: string) => {
         setInputText(text);
 
         if (!isConnected) return;
 
-        socketService.emit('typing', { orderId: Number(orderId), userId: myUserId });
+        socketService.emit('typing', { orderId: Number(activeOrderId), userId: myUserId });
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
-            socketService.emit('stopTyping', { orderId: Number(orderId), userId: myUserId });
+            socketService.emit('stopTyping', { orderId: Number(activeOrderId), userId: myUserId });
         }, 1500);
     };
 
     const handleSend = () => {
-        if (!inputText.trim() || !orderId) return;
+        if (!inputText.trim() || !activeOrderId) return;
 
         const payload = {
-            orderId: Number(orderId),
+            orderId: Number(activeOrderId),
             senderId: myUserId,
             receiverId: Number(recipientId) || 0,
             message: inputText.trim(),
@@ -134,7 +146,7 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
         // Optimistic local add
         const tempMsg: ChatMessage = {
             id: Date.now(),
-            orderId: Number(orderId),
+            orderId: Number(activeOrderId),
             senderId: myUserId,
             senderName: userdata?.username || 'Me',
             receiverId: Number(recipientId) || 0,
@@ -147,7 +159,7 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
         setInputText('');
 
         socketService.emit('sendMessage', payload);
-        socketService.emit('stopTyping', { orderId: Number(orderId), userId: myUserId });
+        socketService.emit('stopTyping', { orderId: Number(activeOrderId), userId: myUserId });
     };
 
     const renderMessageItem = ({ item }: { item: ChatMessage }) => {
@@ -203,7 +215,7 @@ const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, rou
                     <View>
                         <Text style={styles.headerTitle}>{recipientName || 'Order Chat'}</Text>
                         <Text style={styles.headerSubtitle}>
-                            {isRecipientTyping ? 'typing...' : `Order #${orderId}`}
+                            {isRecipientTyping ? 'typing...' : activeOrderId ? `Order #${activeOrderId}` : 'Active Chat'}
                         </Text>
                     </View>
                 </View>

@@ -1,7 +1,8 @@
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, Image } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store/store'
+import socketService from '../../services/socketService'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronLeft, CheckCheck, Package, Sparkles, BellRing, Wallet, MapPin } from 'lucide-react-native'
@@ -19,6 +20,36 @@ const Notifications: React.FC = () => {
     const primaryLightHex = isCollector ? '#fffbeb' : '#ecfdf5';
 
     const [notifications, setNotifications] = useState<any[]>([]);
+
+    useEffect(() => {
+        const handleNotification = (title: string, message: string, type: string) => {
+            const newNotif = {
+                id: String(Date.now()),
+                title,
+                message,
+                type,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isRead: false,
+            };
+            setNotifications(prev => [newNotif, ...prev]);
+        };
+
+        socketService.on('newRideOrder', (d: any) => handleNotification('Nayi Request!', `${d.customerName || 'Customer'} ne pickup request bheji hai.`, 'order'));
+        socketService.on('newOrderAvailable', (d: any) => handleNotification('Naya Order!', `Pickup address: ${d.pickupAddress || 'Lahore'}`, 'order'));
+        socketService.on('bidPlaced', (d: any) => handleNotification('Boli Lag Gayi', `PKR ${d.bidAmount || 0} ki boli bhej di gayi hai.`, 'wallet'));
+        socketService.on('bidAccepted', (d: any) => handleNotification('Boli Manzoor!', `Aapki boli qabool kar li gayi hai.`, 'order'));
+        socketService.on('bidCountered', (d: any) => handleNotification('Counter Offer!', `Rs ${d.counterAmount || 0} ki offer aayi hai.`, 'wallet'));
+        socketService.on('orderCompleted', (d: any) => handleNotification('Order Mukammal!', `Rs ${d.finalPrice || 0} aapke batwe mein jama ho gaye.`, 'wallet'));
+
+        return () => {
+            socketService.off('newRideOrder');
+            socketService.off('newOrderAvailable');
+            socketService.off('bidPlaced');
+            socketService.off('bidAccepted');
+            socketService.off('bidCountered');
+            socketService.off('orderCompleted');
+        };
+    }, []);
 
     const handleMarkAllRead = () => {
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));

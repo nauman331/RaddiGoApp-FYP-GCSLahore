@@ -20,6 +20,8 @@ export interface LiveMapProps {
     } | null;
     nearbyUsers?: NearbyUser[];
     acceptanceRadius?: number; // Radius in meters for the acceptance zone
+    /** Called when user taps the map to manually set location (GPS fallback) */
+    onLocationPicked?: (coord: { latitude: number; longitude: number }) => void;
 }
 
 export interface User {

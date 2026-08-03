@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Modal, Linking, Platform, StatusBar, TextInput } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../../store/store'
 import { acceptOrder, updatecustomerLocation, setRideStatus, resetRide, updatecollectorLocation, RaddiItem, completeRide } from '../../store/slices/rideSlice'
@@ -9,10 +10,9 @@ import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 import socketService from '../../services/socketService'
 import { MapPin, Navigation, CheckCircle, XCircle, Package, User, DollarSign, FileText, Smartphone, Boxes, Wine, Layers, Truck, MessageSquare, Send, Tag, X } from 'lucide-react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { useCallback } from 'react'
 import { useFetch } from '../../apiHooks/useFetch'
 
-const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
+
 
 interface IncomingPickupRequest {
     orderId: string;
@@ -60,19 +60,17 @@ const CollectorRideScreen = () => {
                 setLocating(true);
                 const granted = await getLocationPermission();
                 if (!granted) {
-                    Toast.show({ type: ALERT_TYPE.WARNING, title: 'Permission Chahiye', textBody: 'Location ki ijazat zaroori hai.' });
-                    setCurrentLocation(FALLBACK_LOCATION);
-                    dispatch(updatecollectorLocation(FALLBACK_LOCATION));
+                    Toast.show({ type: ALERT_TYPE.WARNING, title: 'Permission Chahiye', textBody: 'Location permission settings mein on karein.' });
                     return;
                 }
 
                 const locationPromise = getCurrentLocation();
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
-                
+
                 const position = await Promise.race([locationPromise, timeoutPromise]) as any;
                 const { latitude, longitude } = position.coords;
                 const location = { latitude, longitude };
-                
+
                 setCurrentLocation(location);
                 dispatch(updatecollectorLocation(location));
 
@@ -85,9 +83,7 @@ const CollectorRideScreen = () => {
                     });
                 }
             } catch (error: any) {
-                console.log('Fast Location Fallback Triggered');
-                setCurrentLocation(FALLBACK_LOCATION);
-                dispatch(updatecollectorLocation(FALLBACK_LOCATION));
+                Toast.show({ type: ALERT_TYPE.WARNING, title: 'Location Nahi Mili', textBody: 'GPS on karein aur dobara try karein.' });
             } finally {
                 setLocating(false);
             }
@@ -113,10 +109,17 @@ const CollectorRideScreen = () => {
     }, [isConnected, currentLocation, userdata?.id, rideState.orderId]);
 
     // Fetch open/available orders from REST API for collectors logged in after order creation
+    const queryClient = useQueryClient();
     const { data: availableData, refetch: refetchAvailable } = useFetch({
         endpoint: 'order/api/v1/available?page=1&limit=10',
         isAuth: true,
     });
+
+    // On mount: clear any stale cache from previous user session and force fresh fetch
+    useEffect(() => {
+        queryClient.invalidateQueries({ queryKey: ['order/api/v1/available?page=1&limit=10'] });
+        refetchAvailable();
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
@@ -127,9 +130,13 @@ const CollectorRideScreen = () => {
     );
 
     useEffect(() => {
+        if (!availableData) return;
+        console.log('[BuyerRide] RAW availableData:', JSON.stringify(availableData).slice(0, 300));
+
         if (rideState.status === 'idle' && !incomingRequest) {
             const rawOrders = availableData?.orders ?? availableData?.data ?? availableData;
             const orders = Array.isArray(rawOrders) ? rawOrders : [];
+            console.log('[BuyerRide] Parsed orders count:', orders.length);
             if (orders.length > 0) {
                 const firstOrder = orders[0];
                 const mapped: IncomingPickupRequest = {
@@ -215,6 +222,7 @@ const CollectorRideScreen = () => {
         const customerLocation = { latitude: incomingRequest.customerLatitude, longitude: incomingRequest.customerLongitude };
 
         dispatch(acceptOrder({
+            orderId: incomingRequest.orderId,
             customerId: incomingRequest.customerId,
             customerName: incomingRequest.customerName,
             customerLocation,
@@ -226,6 +234,7 @@ const CollectorRideScreen = () => {
 
         if (isConnected) {
             socketService.emit('acceptRaddiOrder', {
+                orderId: Number(incomingRequest.orderId),
                 customerId: incomingRequest.customerId,
                 collectorId: Number(userdata?.id) || userdata?.id,
                 pickupLatitude: incomingRequest.customerLatitude,
@@ -358,6 +367,11 @@ const CollectorRideScreen = () => {
                     coordinates={currentLocation}
                     pickupLocation={rideState.customerLocation}
                     dropoffLocation={null}
+                    onLocationPicked={(coord) => {
+                        setCurrentLocation(coord);
+                        dispatch(updatecollectorLocation(coord));
+                        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Location Set!', textBody: 'Aapki jagah map par set ho gayi.' });
+                    }}
                 />
 
                 {locating && (
@@ -369,8 +383,8 @@ const CollectorRideScreen = () => {
                     </View>
                 )}
 
-                <View 
-                    className="absolute top-12 self-center px-6 py-3 rounded-full shadow-md z-40 border" 
+                <View
+                    className="absolute top-12 self-center px-6 py-3 rounded-full shadow-md z-40 border"
                     style={{ backgroundColor: statusInfo.bgColor, borderColor: statusInfo.border }}
                 >
                     <Text className="font-black text-xs uppercase tracking-widest" style={{ color: statusInfo.color }}>
@@ -483,7 +497,7 @@ const CollectorRideScreen = () => {
                         {incomingRequest && (
                             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                                 <View className="bg-[#f8fafc] p-5 rounded-[32px] border border-[#f1f5f9]">
-                                    
+
                                     <View className="flex-row items-center justify-between mb-4 pb-4 border-b border-[#e2e8f0]">
                                         <View className="flex-row items-center">
                                             <View className="bg-[#fffbeb] p-3 rounded-[16px] mr-3">
@@ -565,48 +579,48 @@ const CollectorRideScreen = () => {
                                     )}
                                 </View>
 
-                                 {/* Custom Bidding Input Section */}
-                                 <View className="mt-4 pt-4 border-t border-[#e2e8f0]">
-                                     <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 px-1">
-                                         Apni Boli (Custom Bid Price Rs)
-                                     </Text>
-                                     <View className="flex-row gap-2">
-                                         <TextInput
-                                             value={customBidAmount}
-                                             onChangeText={setCustomBidAmount}
-                                             placeholder="Misaal: 1350"
-                                             keyboardType="numeric"
-                                             className="flex-1 bg-white px-4 h-[50px] rounded-[18px] border border-[#e2e8f0] font-black text-gray-900 text-base"
-                                         />
-                                         <TouchableOpacity
-                                             onPress={handlePlaceBid}
-                                             disabled={!customBidAmount}
-                                             className={`px-5 rounded-[18px] justify-center flex-row items-center ${customBidAmount ? 'bg-amber-600' : 'bg-gray-200'}`}
-                                         >
-                                             <Tag size={16} color={customBidAmount ? '#ffffff' : '#94a3b8'} className="mr-1.5" />
-                                             <Text className={`font-black text-sm ${customBidAmount ? 'text-white' : 'text-gray-400'}`}>Boli Bhejein</Text>
-                                         </TouchableOpacity>
-                                     </View>
-                                 </View>
+                                {/* Custom Bidding Input Section */}
+                                <View className="mt-4 pt-4 border-t border-[#e2e8f0]">
+                                    <Text className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 px-1">
+                                        Apni Boli (Custom Bid Price Rs)
+                                    </Text>
+                                    <View className="flex-row gap-2">
+                                        <TextInput
+                                            value={customBidAmount}
+                                            onChangeText={setCustomBidAmount}
+                                            placeholder="Misaal: 1350"
+                                            keyboardType="numeric"
+                                            className="flex-1 bg-white px-4 h-[50px] rounded-[18px] border border-[#e2e8f0] font-black text-gray-900 text-base"
+                                        />
+                                        <TouchableOpacity
+                                            onPress={handlePlaceBid}
+                                            disabled={!customBidAmount}
+                                            className={`px-5 rounded-[18px] justify-center flex-row items-center ${customBidAmount ? 'bg-amber-600' : 'bg-gray-200'}`}
+                                        >
+                                            <Tag size={16} color={customBidAmount ? '#ffffff' : '#94a3b8'} className="mr-1.5" />
+                                            <Text className={`font-black text-sm ${customBidAmount ? 'text-white' : 'text-gray-400'}`}>Boli Bhejein</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
 
-                                 <View className="flex-row gap-3 mt-6">
-                                     <TouchableOpacity
-                                         activeOpacity={0.85}
-                                         className="flex-1 bg-[#f1f5f9] py-4 rounded-[24px] flex-row items-center justify-center border border-[#e2e8f0]"
-                                         onPress={handleRejectRequest}
-                                     >
-                                         <Text className="text-gray-700 font-black text-base tracking-wide">Inkaar Karein</Text>
-                                     </TouchableOpacity>
+                                <View className="flex-row gap-3 mt-6">
+                                    <TouchableOpacity
+                                        activeOpacity={0.85}
+                                        className="flex-1 bg-[#f1f5f9] py-4 rounded-[24px] flex-row items-center justify-center border border-[#e2e8f0]"
+                                        onPress={handleRejectRequest}
+                                    >
+                                        <Text className="text-gray-700 font-black text-base tracking-wide">Inkaar Karein</Text>
+                                    </TouchableOpacity>
 
-                                     <TouchableOpacity
-                                         activeOpacity={0.85}
-                                         className="flex-1 bg-[#d97706] py-4 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-amber-600/30"
-                                         onPress={handleAcceptRequest}
-                                     >
-                                         <Text className="text-white font-black text-base tracking-wide">Qabool Karein</Text>
-                                     </TouchableOpacity>
-                                 </View>
-                             </ScrollView>
+                                    <TouchableOpacity
+                                        activeOpacity={0.85}
+                                        className="flex-1 bg-[#d97706] py-4 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-amber-600/30"
+                                        onPress={handleAcceptRequest}
+                                    >
+                                        <Text className="text-white font-black text-base tracking-wide">Qabool Karein</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </ScrollView>
                         )}
                     </View>
                 </View>

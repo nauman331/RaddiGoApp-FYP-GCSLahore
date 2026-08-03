@@ -28,12 +28,20 @@ const Home: React.FC = ({ navigation }: any) => {
     // API returns: { balance: number|string, transactions: [...] }
     const walletBalance = Number(data?.balance ?? data?.wallet?.balance ?? 0);
 
-    // ----- Fetch order/pickup count -----
-    const { data: orderData } = useFetch({
-        endpoint: isCustomer ? 'order/api/v1/my-orders?page=1&limit=1' : 'order/api/v1/my-pickups?page=1&limit=1',
+    // ----- Fetch order/pickup count and recent list -----
+    const { data: orderData, refetch: refetchOrders } = useFetch({
+        endpoint: isCustomer ? 'order/api/v1/my-orders?page=1&limit=5' : 'order/api/v1/my-pickups?page=1&limit=5',
         isAuth: true,
     });
-    const orderCount = orderData?.pagination?.total ?? 0;
+    const orderCount = orderData?.pagination?.total ?? (Array.isArray(orderData?.orders) ? orderData.orders.length : 0);
+
+    const apiOrders = Array.isArray(orderData?.orders)
+        ? orderData.orders
+        : Array.isArray(orderData?.data)
+        ? orderData.data
+        : Array.isArray(orderData)
+        ? orderData
+        : [];
 
     // Show error if fetch fails
     useEffect(() => {
@@ -50,7 +58,8 @@ const Home: React.FC = ({ navigation }: any) => {
     useFocusEffect(
         useCallback(() => {
             refetch();
-        }, [refetch])
+            refetchOrders();
+        }, [refetch, refetchOrders])
     );
 
     const quickActions = [
@@ -204,7 +213,7 @@ const Home: React.FC = ({ navigation }: any) => {
                                 activeOpacity={0.7}
                                 className="items-center"
                                 onPress={() => {
-                                    if (action.route === 'Activity' || action.route === 'Profile' || action.route === 'Wallet') {
+                                    if (action.route) {
                                         navigation.navigate(action.route);
                                     }
                                 }}
@@ -229,19 +238,63 @@ const Home: React.FC = ({ navigation }: any) => {
                         </TouchableOpacity>
                     </View>
 
-                    <View className='bg-white rounded-[32px] p-8 w-full items-center border border-gray-100 shadow-sm'>
-                        <View className="bg-gray-50 w-24 h-24 rounded-full items-center justify-center mb-5">
-                            <Image source={EmptyPic} className='w-14 h-14 opacity-40' resizeMode="contain" />
+                    {apiOrders.length > 0 ? (
+                        apiOrders.slice(0, 3).map((ord: any, idx: number) => {
+                            const displayId = String(ord.id || ord.orderId || ord.order_id || idx + 1);
+                            const displayPrice = ord.finalPrice ?? ord.expectedPrice ?? ord.price;
+                            const statusLower = String(ord.status || 'pending').toLowerCase();
+                            const statusColor = statusLower === 'completed' ? '#059669' : statusLower === 'cancelled' ? '#dc2626' : primaryColor;
+
+                            return (
+                                <TouchableOpacity
+                                    key={displayId || `home-ord-${idx}`}
+                                    onPress={() => navigation.navigate('Activity')}
+                                    activeOpacity={0.8}
+                                    className="bg-white p-4 rounded-[20px] mb-3 border border-gray-100 shadow-sm flex-row items-center justify-between"
+                                >
+                                    <View className="flex-row items-center flex-1 pr-3">
+                                        <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: primaryLight }}>
+                                            <MapPin size={20} color={primaryColor} strokeWidth={2.5} />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="font-black text-gray-900 text-base" numberOfLines={1}>
+                                                Order #{displayId}
+                                            </Text>
+                                            <Text className="text-gray-500 font-bold text-xs" numberOfLines={1}>
+                                                {ord.pickupAddress || ord.address || 'Sabzazar, Lahore'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View className="items-end">
+                                        {displayPrice !== undefined && displayPrice !== null ? (
+                                            <Text className="font-black text-gray-900 text-lg">
+                                                Rs {displayPrice}
+                                            </Text>
+                                        ) : (
+                                            <Text className="font-black text-gray-400 text-base">--</Text>
+                                        )}
+                                        <Text className="font-extrabold text-[10px] uppercase tracking-wider mt-0.5" style={{ color: statusColor }}>
+                                            {statusLower}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })
+                    ) : (
+                        <View className='bg-white rounded-[32px] p-8 w-full items-center border border-gray-100 shadow-sm'>
+                            <View className="bg-gray-50 w-24 h-24 rounded-full items-center justify-center mb-5">
+                                <Image source={EmptyPic} className='w-14 h-14 opacity-40' resizeMode="contain" />
+                            </View>
+                            <Text className='text-gray-900 text-xl font-black text-center mb-2 tracking-tight'>
+                                Koi order nahi hai
+                            </Text>
+                            <Text className='text-gray-500 text-sm text-center leading-relaxed font-medium px-4'>
+                                {isCustomer
+                                    ? "Naya pickup schedule karein aur apni history yahan dekhein."
+                                    : "Order pura karein aur apni rozana ki kamai yahan track karein."}
+                            </Text>
                         </View>
-                        <Text className='text-gray-900 text-xl font-black text-center mb-2 tracking-tight'>
-                            Koi order nahi hai
-                        </Text>
-                        <Text className='text-gray-500 text-sm text-center leading-relaxed font-medium px-4'>
-                            {isCustomer
-                                ? "Naya pickup schedule karein aur apni history yahan dekhein."
-                                : "Order pura karein aur apni rozana ki kamai yahan track karein."}
-                        </Text>
-                    </View>
+                    )}
                 </View>
 
             </ScrollView>

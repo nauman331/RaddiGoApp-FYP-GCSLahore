@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, TouchableOpacity } from 'react-native'
 import React, { useState, useEffect, useRef } from 'react'
-import MapView, { Marker, Polyline, Circle, PROVIDER_GOOGLE } from 'react-native-maps'
+import MapView, { Marker, Polyline, Circle, PROVIDER_GOOGLE, MapPressEvent } from 'react-native-maps'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
 import { LiveMapProps } from '../types/map'
-import { Home, Truck, MapPin, User, Package } from 'lucide-react-native'
+import { Home, Truck, MapPin, User, Package, Navigation } from 'lucide-react-native'
 
 interface MarkerStyle {
     markerContainer: ViewStyle;
@@ -46,7 +46,7 @@ const markerStyles = StyleSheet.create<MarkerStyle>({
     }
 });
 
-const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffLocation, nearbyUsers, acceptanceRadius }) => {
+const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffLocation, nearbyUsers, acceptanceRadius, onLocationPicked }) => {
     const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
     const [directionsError, setDirectionsError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -113,14 +113,24 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
         }
     }, [pickupLocation, dropoffLocation, coordinates]);
 
+    // Default map region — Pakistan center, zoomed out. No fake Lahore pin.
+    const DEFAULT_REGION = { latitude: 30.3753, longitude: 69.3451, latitudeDelta: 8, longitudeDelta: 8 };
+
     const getMapRegion = () => {
-        const center = coordinates ?? (pickupLocation ?? { latitude: 31.5204, longitude: 74.3587 }); 
+        const center = coordinates ?? pickupLocation;
+        if (!center) return DEFAULT_REGION;
         return {
             latitude: center.latitude,
             longitude: center.longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
         };
+    };
+
+    const handleMapPress = (e: MapPressEvent) => {
+        if (onLocationPicked) {
+            onLocationPicked(e.nativeEvent.coordinate);
+        }
     };
 
     if (isLoading && !coordinates && !pickupLocation) {
@@ -133,14 +143,22 @@ const LiveMap: React.FC<LiveMapProps> = ({ coordinates, pickupLocation, dropoffL
 
     return (
         <View className='flex-1 bg-[#f8fafc]'>
+            {/* Location picker banner — shown when GPS unavailable */}
+            {!coordinates && onLocationPicked && (
+                <View style={{ position: 'absolute', top: 12, left: 16, right: 16, zIndex: 100, backgroundColor: '#1e293b', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 8, elevation: 8 }}>
+                    <Navigation size={18} color="#f59e0b" strokeWidth={2.5} style={{ marginRight: 10 }} />
+                    <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700', flex: 1 }}>GPS nahi mila — map par tap kar ke apni jagah set karein</Text>
+                </View>
+            )}
             <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
                 style={{ flex: 1 }}
                 initialRegion={getMapRegion()}
-                showsUserLocation={false} 
+                showsUserLocation={false}
                 showsMyLocationButton={false}
                 followsUserLocation={false}
+                onPress={onLocationPicked ? handleMapPress : undefined}
             >
                 {coordinates && (
                     <Marker

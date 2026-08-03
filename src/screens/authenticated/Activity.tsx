@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, Image } from 'react-native'
 import { useSelector } from 'react-redux'
+import { useFocusEffect } from '@react-navigation/native'
 import { RootState } from '../../store/store'
 import Header from '../../components/Header'
 import EmptyPic from "../../assets/homeempty.png"
@@ -21,14 +22,22 @@ const Activity: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'Sab' | 'Pura Hua' | 'Cancel Hua'>('Sab');
     const tabs = ['Sab', 'Pura Hua', 'Cancel Hua'] as const;
 
-    const { data: orderData } = useFetch({
+    const { data: orderData, refetch } = useFetch({
         endpoint: isCustomer ? 'order/api/v1/my-orders?page=1&limit=20' : 'order/api/v1/my-pickups?page=1&limit=20',
         isAuth: true,
     });
 
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
+
     // API returns: { orders: [...], pagination: {} }
     const apiOrders = Array.isArray(orderData?.orders)
         ? orderData.orders
+        : Array.isArray(orderData?.data)
+        ? orderData.data
         : Array.isArray(orderData)
         ? orderData
         : [];
@@ -103,10 +112,13 @@ const Activity: React.FC = () => {
                     filteredOrders.map((order, idx) => {
                         const statusConfig = getStatusDetails(order.status);
                         const StatusIcon = statusConfig.icon;
+                        const displayId = String(order.id || order.orderId || order.order_id || idx + 1);
+                        const displayPrice = order.finalPrice ?? order.expectedPrice ?? order.price;
+                        const displayDate = order.createdAt || order.created_at || order.date;
 
                         return (
                             <TouchableOpacity 
-                                key={order.orderId || `order-${idx}`} 
+                                key={displayId || `order-${idx}`} 
                                 className="bg-white mt-4 p-5 rounded-[24px] border border-[#f1f5f9] shadow-sm"
                                 activeOpacity={0.7}
                             >
@@ -117,7 +129,7 @@ const Activity: React.FC = () => {
                                         </View>
                                         <View>
                                             <Text className="font-black text-gray-900 text-lg tracking-tight" numberOfLines={1}>
-                                                Order #{order.orderId?.substring(0,6).toUpperCase() || 'N/A'}
+                                                Order #{displayId}
                                             </Text>
                                             <Text className="text-[10px] font-extrabold uppercase tracking-widest mt-0.5" style={{ color: statusConfig.color }}>
                                                 {statusConfig.label}
@@ -127,10 +139,10 @@ const Activity: React.FC = () => {
                                     
                                     <View className="items-end">
                                         <Text className="text-gray-400 font-extrabold text-[10px] uppercase tracking-widest mb-0.5">Raqam</Text>
-                                        {order.price ? (
+                                        {displayPrice !== undefined && displayPrice !== null ? (
                                             <View className="flex-row items-baseline">
                                                 <Text className="text-gray-900 font-black text-xs mr-1">Rs</Text>
-                                                <Text className="font-black text-gray-900 text-xl">{order.price}</Text>
+                                                <Text className="font-black text-gray-900 text-xl">{displayPrice}</Text>
                                             </View>
                                         ) : (
                                             <Text className="font-black text-gray-400 text-xl">--</Text>
@@ -144,7 +156,7 @@ const Activity: React.FC = () => {
                                         <View className="ml-2.5 flex-1">
                                             <Text className="text-gray-400 font-extrabold text-[10px] uppercase tracking-widest mb-0.5">Pata (Location)</Text>
                                             <Text className="text-gray-700 text-xs font-bold leading-relaxed" numberOfLines={2}>
-                                                {order.pickupAddress || 'Pata faraham nahi kiya gaya'}
+                                                {order.pickupAddress || order.address || 'Pata faraham nahi kiya gaya'}
                                             </Text>
                                         </View>
                                     </View>
@@ -154,7 +166,7 @@ const Activity: React.FC = () => {
                                     <View className="flex-row items-center">
                                         <CalendarClock size={16} color="#64748b" strokeWidth={2.5} />
                                         <Text className="text-gray-600 text-xs ml-2.5 font-bold">
-                                            {order.date ? new Date(order.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Tareekh mojood nahi'}
+                                            {displayDate ? new Date(displayDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Tareekh mojood nahi'}
                                         </Text>
                                     </View>
                                 </View>

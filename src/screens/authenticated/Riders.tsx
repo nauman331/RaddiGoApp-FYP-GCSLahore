@@ -10,11 +10,9 @@ import BottomSheet from '../../components/BottomSheet'
 import Header from '../../components/Header'
 import { Truck } from 'lucide-react-native'
 
-const FALLBACK_LOCATION = { latitude: 31.5204, longitude: 74.3587 };
-
 const Riders = () => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; role?: string } };
-    
+
     const role = userdata?.role || 'customer';
     const isCustomer = role === 'customer';
     const primaryColorHex = isCustomer ? '#059669' : '#d97706';
@@ -22,9 +20,6 @@ const Riders = () => {
     const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
     const [locating, setLocating] = useState(false);
     const bottomSheetRef = useRef<any>(null);
-
-    const pickupLocation = { latitude: 31.5204, longitude: 74.3587 };
-    const dropoffLocation = { latitude: 31.4695, longitude: 74.2645 };
 
     useEffect(() => {
         const fetchLocationFast = async () => {
@@ -36,23 +31,21 @@ const Riders = () => {
                     Toast.show({
                         type: ALERT_TYPE.WARNING,
                         title: 'Permission Chahiye',
-                        textBody: 'Location ki ijazat zaroori hai.',
+                        textBody: 'Location permission settings mein on karein.',
                     });
                     Linking.openSettings();
-                    setCoordinates(FALLBACK_LOCATION);
                     return;
                 }
 
                 const locationPromise = getCurrentLocation();
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
-                
+
                 const position = await Promise.race([locationPromise, timeoutPromise]) as any;
                 const { latitude, longitude } = position.coords;
-                
+
                 setCoordinates({ latitude, longitude });
             } catch (error: any) {
-                console.log('Fast Location Fallback Triggered');
-                setCoordinates(FALLBACK_LOCATION);
+                Toast.show({ type: ALERT_TYPE.WARNING, title: 'Location Nahi Mili', textBody: 'GPS on karein aur dobara try karein.' });
             } finally {
                 setLocating(false);
             }
@@ -64,13 +57,14 @@ const Riders = () => {
     return (
         <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
-            
+
             <View className="bg-white shadow-sm z-20 pb-2 rounded-b-[32px] border-b border-[#f1f5f9]">
                 <Header />
             </View>
 
             <View style={{ flex: 1, position: 'relative' }}>
-                <LiveMap pickupLocation={pickupLocation} dropoffLocation={dropoffLocation} />
+                {/* Pass real device location — no hardcoded Lahore coords */}
+                <LiveMap coordinates={coordinates} pickupLocation={null} dropoffLocation={null} />
 
                 {locating && (
                     <View className="absolute inset-0 justify-center items-center bg-black/20 z-50 backdrop-blur-sm">

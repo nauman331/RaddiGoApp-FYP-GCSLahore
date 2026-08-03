@@ -35,20 +35,20 @@ const PlaceOrder: React.FC<{ coordinates: { latitude: number; longitude: number 
     }, []);
 
     const handleNewOrder = async () => {
-        if (!pickupAddress || !approximateRaddiInKg) {
-            setMessage({ text: 'Mukkamal tafseel darj karein', type: 'error' });
-            return;
-        }
+        const weightKg = parseFloat(approximateRaddiInKg || '10');
+        const addressText = pickupAddress.trim() || 'Sabzazar, Lahore';
+
         const data = {
             customerId: Number(userdata?.id) || 1,
             pickupLatitude: coordinates?.latitude ?? 31.5204,
             pickupLongitude: coordinates?.longitude ?? 74.3587,
-            pickupAddress,
-            approximateRaddiInKg
+            pickupAddress: addressText,
+            approximateRaddiInKg: weightKg,
+            expectedPrice: weightKg * 50, // Default 50 Rs/kg if no bidding
         };
         try {
             if (isConnected) {
-                socketService.emit("makeRaddiOrder", data);
+                socketService.emit("createOrder", data);
             } else {
                 setMessage({ text: 'Server se rabta toot gaya hai...', type: 'error' });
             }
