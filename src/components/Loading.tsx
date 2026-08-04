@@ -1,20 +1,19 @@
-import { View, Text, ActivityIndicator, Image, Animated, Easing, StatusBar } from 'react-native';
+import { View, Text, ActivityIndicator, Image, Animated, Easing, StatusBar, StyleSheet } from 'react-native';
 import React, { useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import LOGO_URI from '../assets/logo.jpeg';
 
 const Loading: React.FC = () => {
-    // We will animate both scale and opacity for a smooth "ripple/breathing" effect
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(0.8)).current;
 
-    const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { role?: string } };
-    const role = userdata?.role || 'customer';
+    const authState = useSelector((state: RootState) => state?.auth);
+    const role = authState?.userdata?.role || 'customer';
 
     const isCollector = role === 'collector';
-    const primaryColor = isCollector ? '#d97706' : '#059669'; // Amber vs Emerald
-    const primaryLight = isCollector ? '#fef3c7' : '#d1fae5'; // Soft Amber vs Soft Emerald
+    const primaryColor = isCollector ? '#d97706' : '#059669';
+    const primaryLight = isCollector ? '#fef3c7' : '#d1fae5';
 
     useEffect(() => {
         Animated.loop(
@@ -52,11 +51,10 @@ const Loading: React.FC = () => {
     }, [scaleAnim, opacityAnim]);
 
     return (
-        <View className="flex-1 justify-center items-center absolute top-0 left-0 right-0 bottom-0 z-50 bg-white/95 backdrop-blur-md">
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent />
 
-            <View className="items-center justify-center relative">
-                {/* Animated Pulsing Background Ring */}
+            <View style={styles.logoWrapper}>
                 <Animated.View
                     style={{
                         position: 'absolute',
@@ -69,25 +67,75 @@ const Loading: React.FC = () => {
                     }}
                 />
 
-                {/* Static Floating Logo Container */}
-                <View className="bg-white rounded-full w-24 h-24 items-center justify-center shadow-xl border border-gray-50 z-10">
+                <View style={styles.logoBox}>
                     <Image
                         source={LOGO_URI}
-                        className="w-14 h-14"
+                        style={styles.logoImage}
                         resizeMode="contain"
                     />
                 </View>
             </View>
 
-            {/* Clean, modern typography and subtle indicator */}
-            <View className="mt-12 items-center">
+            <View style={styles.textWrapper}>
                 <ActivityIndicator size="small" color={primaryColor} />
-                <Text className="text-gray-400 font-extrabold text-xs mt-4 tracking-[0.2em] uppercase">
+                <Text style={styles.loadingText}>
                     Please Wait
                 </Text>
             </View>
         </View>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 50,
+        backgroundColor: '#ffffff',
+    },
+    logoWrapper: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    logoBox: {
+        backgroundColor: '#ffffff',
+        borderRadius: 50,
+        width: 96,
+        height: 96,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 6,
+        borderWidth: 1,
+        borderColor: '#f9fafb',
+        zIndex: 10,
+    },
+    logoImage: {
+        width: 56,
+        height: 56,
+    },
+    textWrapper: {
+        marginTop: 48,
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#9ca3af',
+        fontWeight: '800',
+        fontSize: 12,
+        marginTop: 16,
+        letterSpacing: 2,
+        textTransform: 'uppercase',
+    },
+});
 
 export default Loading;

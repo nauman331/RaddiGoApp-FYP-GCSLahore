@@ -22,7 +22,7 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 
 GoogleSignin.configure({
     scopes: ['email', 'profile'],
-    offlineAccess: true,
+    offlineAccess: false,
 })
 
 const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {

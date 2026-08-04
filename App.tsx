@@ -33,9 +33,13 @@ const AppContent: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const initPermissions = async () => {
-    await requestUserPermission();
-    notificationListener();
-    await getLocationPermission();
+    try {
+      await requestUserPermission();
+      notificationListener();
+      await getLocationPermission();
+    } catch (err) {
+      console.log("Permission initialization warning:", err);
+    }
   };
 
   useEffect(() => {
@@ -139,17 +143,17 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <PersistGate loading={<Loading />} persistor={persistor}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <PersistGate loading={<Loading />} persistor={persistor}>
             <BottomSheetModalProvider>
               <AppContent />
             </BottomSheetModalProvider>
-          </GestureHandlerRootView>
-        </PersistGate>
-      </QueryClientProvider>
-    </Provider>
+          </PersistGate>
+        </QueryClientProvider>
+      </Provider>
+    </GestureHandlerRootView>
   )
 }
 

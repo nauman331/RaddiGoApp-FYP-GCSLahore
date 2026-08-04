@@ -1,48 +1,42 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text, Image, Animated, StatusBar } from 'react-native'
+import { View, Text, Image, Animated, StatusBar, StyleSheet } from 'react-native'
 import Logo from "../../assets/half-logo.jpeg"
 
 const SplashScreen: React.FC = ({ navigation }: any) => {
-    // Logo Animations
     const logoOpacity = useRef(new Animated.Value(0)).current
     const logoScale = useRef(new Animated.Value(0.4)).current
-    
-    // Typography Animations
+
     const textOpacity = useRef(new Animated.Value(0)).current
     const textTranslateY = useRef(new Animated.Value(20)).current
 
     useEffect(() => {
-        // Sequence: Pop the logo first, then slide up the text
         Animated.sequence([
-            // 1. Logo Entrance
             Animated.parallel([
-                Animated.timing(logoOpacity, { 
-                    toValue: 1, 
-                    duration: 600, 
-                    useNativeDriver: true 
+                Animated.timing(logoOpacity, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true
                 }),
-                Animated.spring(logoScale, { 
-                    toValue: 1, 
-                    friction: 6, 
-                    tension: 40, 
-                    useNativeDriver: true 
+                Animated.spring(logoScale, {
+                    toValue: 1,
+                    friction: 6,
+                    tension: 40,
+                    useNativeDriver: true
                 })
             ]),
-            // 2. Text Entrance
             Animated.parallel([
-                Animated.timing(textOpacity, { 
-                    toValue: 1, 
-                    duration: 500, 
-                    useNativeDriver: true 
+                Animated.timing(textOpacity, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true
                 }),
-                Animated.timing(textTranslateY, { 
-                    toValue: 0, 
-                    duration: 500, 
-                    useNativeDriver: true 
+                Animated.timing(textTranslateY, {
+                    toValue: 0,
+                    duration: 500,
+                    useNativeDriver: true
                 })
             ])
         ]).start(() => {
-            // Navigate to the next screen after a brief pause so the user can read the text
             setTimeout(() => {
                 navigation.replace('InitialScreen');
             }, 1200);
@@ -50,47 +44,39 @@ const SplashScreen: React.FC = ({ navigation }: any) => {
     }, [])
 
     return (
-        <View className="flex-1 bg-white items-center justify-center">
-            {/* Make the status bar blend seamlessly into the white background */}
+        <View style={styles.root}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent />
 
-            {/* Subtle background decoration to make the white feel less empty */}
-            <View className="absolute top-0 left-0 right-0 bottom-0 items-center justify-center overflow-hidden opacity-[0.03] pointer-events-none">
-                <View className="w-[150%] aspect-square rounded-full border-[60px] border-emerald-600 absolute -top-1/4" />
-                <View className="w-[150%] aspect-square rounded-full border-[60px] border-emerald-600 absolute -bottom-1/4" />
-            </View>
-
-            {/* Logo Wrapper */}
             <Animated.View
-                style={{
-                    opacity: logoOpacity,
-                    transform: [{ scale: logoScale }],
-                }}
-                className="items-center justify-center z-10 mb-8"
+                style={[
+                    styles.logoWrapper,
+                    {
+                        opacity: logoOpacity,
+                        transform: [{ scale: logoScale }],
+                    }
+                ]}
             >
-                {/* Wrapping the JPEG in a white padded box gives it an 'App Icon' feel and hides harsh edges */}
-                <View className="bg-white rounded-[32px] p-2 shadow-2xl border border-gray-50">
-                    <Image 
-                        source={Logo} 
-                        className="w-36 h-36 rounded-3xl" 
+                <View style={styles.logoBox}>
+                    <Image
+                        source={Logo}
+                        style={styles.logoImage}
                         resizeMode="cover"
                     />
                 </View>
             </Animated.View>
 
-            {/* Typography Wrapper */}
             <Animated.View
-                style={{
-                    opacity: textOpacity,
-                    transform: [{ translateY: textTranslateY }],
-                }}
-                className="items-center z-10"
+                style={[
+                    styles.textWrapper,
+                    {
+                        opacity: textOpacity,
+                        transform: [{ translateY: textTranslateY }],
+                    }
+                ]}
             >
-                <Text className="text-gray-900 text-4xl font-black tracking-tight">RaddiGo</Text>
-                
-                {/* Modern Pill-shaped Subtitle */}
-                <View className="mt-3 bg-emerald-50 px-5 py-2 rounded-full border border-emerald-100 shadow-sm">
-                    <Text className="text-emerald-700 text-xs font-extrabold uppercase tracking-widest">
+                <Text style={styles.brandTitle}>RaddiGo</Text>
+                <View style={styles.subPill}>
+                    <Text style={styles.subPillText}>
                         Apke Darwazay Tak
                     </Text>
                 </View>
@@ -98,5 +84,63 @@ const SplashScreen: React.FC = ({ navigation }: any) => {
         </View>
     )
 }
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    logoWrapper: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+        marginBottom: 32,
+    },
+    logoBox: {
+        backgroundColor: '#ffffff',
+        borderRadius: 32,
+        padding: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#f9fafb',
+    },
+    logoImage: {
+        width: 144,
+        height: 144,
+        borderRadius: 24,
+    },
+    textWrapper: {
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    brandTitle: {
+        color: '#111827',
+        fontSize: 36,
+        fontWeight: '900',
+        letterSpacing: -0.5,
+    },
+    subPill: {
+        marginTop: 12,
+        backgroundColor: '#ecfdf5',
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#d1fae5',
+    },
+    subPillText: {
+        color: '#047857',
+        fontSize: 11,
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        letterSpacing: 1.5,
+    },
+})
 
 export default SplashScreen

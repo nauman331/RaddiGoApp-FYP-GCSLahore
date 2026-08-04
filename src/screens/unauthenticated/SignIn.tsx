@@ -20,6 +20,11 @@ import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin'
 
+GoogleSignin.configure({
+    scopes: ['email', 'profile'],
+    offlineAccess: false,
+})
+
 const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
     const dispatch = useDispatch()
     const { mutateAsync, isPending } = useSubmit({ endpoint: 'auth/api/v1/login' })
