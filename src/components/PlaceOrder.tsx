@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
 import socketService from '../services/socketService'
-import logo from "../assets/logo.png"
+import logo from "../assets/logo.jpeg"
 import { MapPin, Package, AlertCircle, CheckCircle2 } from 'lucide-react-native'
 
 const PlaceOrder: React.FC<{ coordinates: { latitude: number; longitude: number } | null }> = ({ coordinates }) => {
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata: { id: string; role?: string } };
     const { isConnected } = useSelector((state: RootState) => state.socket);
-    
+
     const role = userdata?.role || 'customer';
     const primaryColorHex = role === 'collector' ? '#d97706' : '#059669';
 
@@ -26,7 +26,7 @@ const PlaceOrder: React.FC<{ coordinates: { latitude: number; longitude: number 
             setMessage({ text: `Aapka order darj ho gaya hai!`, type: 'success' });
             setPickupAddress("");
             setApproximateRaddiInKg("");
-            
+
             setTimeout(() => setMessage({ text: '', type: null }), 3000);
         });
         return () => {
@@ -58,7 +58,7 @@ const PlaceOrder: React.FC<{ coordinates: { latitude: number; longitude: number 
     };
 
     return (
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className='bg-white w-full flex-1'
         >

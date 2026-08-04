@@ -2,13 +2,13 @@ import { View, Text, ActivityIndicator, Image, Animated, Easing, StatusBar } fro
 import React, { useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
-import LOGO_URI from '../assets/logo.png';
+import LOGO_URI from '../assets/logo.jpeg';
 
 const Loading: React.FC = () => {
     // We will animate both scale and opacity for a smooth "ripple/breathing" effect
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(0.8)).current;
-    
+
     const { userdata } = useSelector((state: RootState) => state.auth) as { userdata?: { role?: string } };
     const role = userdata?.role || 'customer';
 
@@ -54,7 +54,7 @@ const Loading: React.FC = () => {
     return (
         <View className="flex-1 justify-center items-center absolute top-0 left-0 right-0 bottom-0 z-50 bg-white/95 backdrop-blur-md">
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-            
+
             <View className="items-center justify-center relative">
                 {/* Animated Pulsing Background Ring */}
                 <Animated.View
@@ -68,7 +68,7 @@ const Loading: React.FC = () => {
                         opacity: opacityAnim,
                     }}
                 />
-                
+
                 {/* Static Floating Logo Container */}
                 <View className="bg-white rounded-full w-24 h-24 items-center justify-center shadow-xl border border-gray-50 z-10">
                     <Image
