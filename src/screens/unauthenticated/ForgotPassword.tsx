@@ -39,6 +39,8 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
     const [canResend, setCanResend] = useState(false)
     const [focusedField, setFocusedField] = useState<string | null>(null)
 
+    const confirmPwRef = useRef<TextInput>(null)
+
     const fadeAnim = useRef(new Animated.Value(0)).current
     const slideAnim = useRef(new Animated.Value(20)).current
 
@@ -204,6 +206,10 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                         placeholderTextColor="#C0C0C0"
                                         keyboardType="email-address"
                                         autoCapitalize="none"
+                                        autoComplete="email"
+                                        textContentType="emailAddress"
+                                        returnKeyType="done"
+                                        onSubmitEditing={handleSendOTP}
                                         value={email}
                                         onChangeText={setEmail}
                                         onFocus={() => setFocusedField('email')}
@@ -285,6 +291,11 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                             placeholder="Kam az kam 6 characters"
                                             placeholderTextColor="#C0C0C0"
                                             secureTextEntry={!showPassword}
+                                            autoComplete="new-password"
+                                            textContentType="newPassword"
+                                            returnKeyType="next"
+                                            blurOnSubmit={false}
+                                            onSubmitEditing={() => confirmPwRef.current?.focus()}
                                             value={newPassword}
                                             onChangeText={setNewPassword}
                                             onFocus={() => setFocusedField('newpw')}
@@ -303,10 +314,15 @@ const ForgotPassword: React.FC<{ navigation: any; route: any }> = ({ navigation,
                                     ]}>
                                         <Lock size={18} color={focusedField === 'confirmpw' ? theme.primary : '#9CA3AF'} strokeWidth={2} />
                                         <TextInput
+                                            ref={confirmPwRef}
                                             style={styles.input}
                                             placeholder="Password dobara likhein"
                                             placeholderTextColor="#C0C0C0"
                                             secureTextEntry={!showConfirm}
+                                            autoComplete="new-password"
+                                            textContentType="newPassword"
+                                            returnKeyType="done"
+                                            onSubmitEditing={handleResetPassword}
                                             value={confirmPassword}
                                             onChangeText={setConfirmPassword}
                                             onFocus={() => setFocusedField('confirmpw')}

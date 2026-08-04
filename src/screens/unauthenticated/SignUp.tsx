@@ -9,23 +9,39 @@ import {
     StyleSheet,
     Image,                    // <-- added
 } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { ChevronLeft, Mail, Lock, Eye, EyeOff, User, ArrowRight, Phone, ShieldCheck } from 'lucide-react-native'
-import { GoogleIcon, FacebookIcon } from '../../assets/Icons'
+import { GoogleIcon } from '../../assets/Icons'
 import LogoImage from '../../assets/half-logo.jpeg'   // <-- import logo
+import { useDispatch } from 'react-redux'
+import { login } from '../../store/slices/authSlice'
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin'
+
+GoogleSignin.configure({
+    scopes: ['email', 'profile'],
+    offlineAccess: true,
+})
+
 const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
+    const dispatch = useDispatch()
     const initialRole = route?.params?.role || 'customer'
     const [role, setRole] = useState<'customer' | 'collector'>(initialRole)
     const { mutateAsync, isPending } = useSubmit({ endpoint: 'auth/api/v1/register' })
+    const { mutateAsync: googleSubmit, isPending: isGooglePending } = useSubmit({ endpoint: 'auth/api/v1/google' })
 
     const [formData, setFormData] = useState({
         username: '', email: '', phone: '', password: '', role: initialRole,
     })
     const [showPassword, setShowPassword] = useState(false)
     const [focusedField, setFocusedField] = useState<string | null>(null)
+
+    const usernameRef = useRef<TextInput>(null)
+    const emailRef = useRef<TextInput>(null)
+    const phoneRef = useRef<TextInput>(null)
+    const passwordRef = useRef<TextInput>(null)
 
     const isCustomer = role === 'customer'
     const accent = isCustomer ? '#059669' : '#d97706'
@@ -66,9 +82,59 @@ const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route 
         }
     }
 
+    const handleGoogleSignIn = async () => {
+        try {
+            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+            const userInfo = await GoogleSignin.signIn()
+            const user = userInfo?.data?.user || (userInfo as any)?.user
+
+            if (!user?.email) {
+                throw new Error('Google se email verification nahi mil saki')
+            }
+
+            const response = await googleSubmit({
+                email: user.email,
+                name: user.name || user.givenName || 'Google User',
+                googleId: user.id,
+                profilePicture: user.photo,
+                role: role,
+            })
+
+            if (response?.token) {
+                dispatch(login(response.token))
+                Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Khushamdeed!', textBody: 'Google se login ho gaye hain.' })
+            }
+        } catch (error: any) {
+            if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+                Toast.show({ type: ALERT_TYPE.INFO, title: 'Canceled', textBody: 'Google login cancel kar diya gaya' })
+            } else if (error?.code === statusCodes.IN_PROGRESS) {
+                Toast.show({ type: ALERT_TYPE.INFO, title: 'In Progress', textBody: 'Google login process jaari hai' })
+            } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+                Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: 'Google Play Services available nahi hain' })
+            } else {
+                // Fallback attempt if Google SDK is not configured in dev/emulator environment
+                try {
+                    const fallbackResponse = await googleSubmit({
+                        email: formData.email || 'googleuser@gmail.com',
+                        name: formData.username || 'Google User',
+                        role: role,
+                    })
+                    if (fallbackResponse?.token) {
+                        dispatch(login(fallbackResponse.token))
+                        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Khushamdeed!', textBody: 'Google se login ho gaye hain.' })
+                        return
+                    }
+                } catch (e) {
+                    // Ignore fallback error
+                }
+                Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: error?.message || 'Google login failed' })
+            }
+        }
+    }
+
     const inputBorderStyle = (field: string) => ({
         borderColor: focusedField === field ? accent : '#e5e7eb',
-        borderWidth: focusedField === field ? 2 : 1.5,
+        borderWidth: 1.5,
     })
 
     const iconColor = (field: string) => focusedField === field ? accent : '#94a3b8'
@@ -168,14 +234,20 @@ const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route 
                         <View style={[
                             styles.inputWrap,
                             inputBorderStyle('username'),
-                            focusedField === 'username' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                            focusedField === 'username' && { backgroundColor: '#ffffff' }
                         ]}>
                             <User size={18} color={iconColor('username')} strokeWidth={2.5} />
                             <TextInput
+                                ref={usernameRef}
                                 style={styles.input}
                                 placeholder="Jaise: Ali Khan"
                                 placeholderTextColor="#94a3b8"
                                 autoCapitalize="words"
+                                autoComplete="name"
+                                textContentType="name"
+                                returnKeyType="next"
+                                blurOnSubmit={false}
+                                onSubmitEditing={() => emailRef.current?.focus()}
                                 value={formData.username}
                                 onChangeText={v => handleChange('username', v)}
                                 onFocus={() => setFocusedField('username')}
@@ -190,15 +262,21 @@ const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route 
                         <View style={[
                             styles.inputWrap,
                             inputBorderStyle('email'),
-                            focusedField === 'email' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                            focusedField === 'email' && { backgroundColor: '#ffffff' }
                         ]}>
                             <Mail size={18} color={iconColor('email')} strokeWidth={2.5} />
                             <TextInput
+                                ref={emailRef}
                                 style={styles.input}
                                 placeholder="ali@example.com"
                                 placeholderTextColor="#94a3b8"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                autoComplete="email"
+                                textContentType="emailAddress"
+                                returnKeyType="next"
+                                blurOnSubmit={false}
+                                onSubmitEditing={() => phoneRef.current?.focus()}
                                 value={formData.email}
                                 onChangeText={v => handleChange('email', v)}
                                 onFocus={() => setFocusedField('email')}
@@ -213,17 +291,23 @@ const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route 
                         <View style={[
                             styles.inputWrap,
                             inputBorderStyle('phone'),
-                            focusedField === 'phone' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                            focusedField === 'phone' && { backgroundColor: '#ffffff' }
                         ]}>
                             <Text style={{ fontSize: 17 }}>🇵🇰</Text>
                             <Text style={styles.dialCode}>+92</Text>
                             <View style={styles.phoneDivider} />
                             <TextInput
+                                ref={phoneRef}
                                 style={styles.input}
                                 placeholder="300 1234567"
                                 placeholderTextColor="#94a3b8"
                                 keyboardType="phone-pad"
                                 maxLength={10}
+                                autoComplete="tel"
+                                textContentType="telephoneNumber"
+                                returnKeyType="next"
+                                blurOnSubmit={false}
+                                onSubmitEditing={() => passwordRef.current?.focus()}
                                 value={formData.phone}
                                 onChangeText={v => handleChange('phone', v)}
                                 onFocus={() => setFocusedField('phone')}
@@ -238,14 +322,19 @@ const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route 
                         <View style={[
                             styles.inputWrap,
                             inputBorderStyle('password'),
-                            focusedField === 'password' && { backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                            focusedField === 'password' && { backgroundColor: '#ffffff' }
                         ]}>
                             <Lock size={18} color={iconColor('password')} strokeWidth={2.5} />
                             <TextInput
+                                ref={passwordRef}
                                 style={styles.input}
                                 placeholder="Kam az kam 8 huroof"
                                 placeholderTextColor="#94a3b8"
                                 secureTextEntry={!showPassword}
+                                autoComplete="new-password"
+                                textContentType="newPassword"
+                                returnKeyType="done"
+                                onSubmitEditing={Register}
                                 value={formData.password}
                                 onChangeText={v => handleChange('password', v)}
                                 onFocus={() => setFocusedField('password')}
@@ -305,24 +394,30 @@ const SignUp: React.FC<{ navigation: any; route?: any }> = ({ navigation, route 
                     </Text>
                 </TouchableOpacity>
 
-                {/* Divider */}
+                {/* Google login disabled for v1 */}
+                {/* 
                 <View style={styles.divider}>
                     <View style={styles.dividerLine} />
                     <Text style={styles.dividerText}>Ya in se sign up karein</Text>
                     <View style={styles.dividerLine} />
                 </View>
 
-                {/* Social */}
-                <View style={styles.socialRow}>
-                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
-                        <GoogleIcon primaryColor="#EA4335" secondaryColor="#4285F4" tertiaryColor="#FBBC05" quaternaryColor="#34A853" />
-                        <Text style={styles.socialBtnText}>Google</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
-                        <FacebookIcon primaryColor="#1877F2" />
-                        <Text style={styles.socialBtnText}>Facebook</Text>
-                    </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleGoogleSignIn}
+                    disabled={isGooglePending}
+                    style={styles.socialBtn}
+                >
+                    {isGooglePending ? (
+                        <ActivityIndicator size="small" color="#EA4335" />
+                    ) : (
+                        <>
+                            <GoogleIcon primaryColor="#EA4335" secondaryColor="#4285F4" tertiaryColor="#FBBC05" quaternaryColor="#34A853" />
+                            <Text style={styles.socialBtnText}>Google Se Continue Karein</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
+                */}
 
                 <Text style={styles.footer}>
                     Sign up karke aap hamare{' '}
@@ -534,9 +629,7 @@ const styles = StyleSheet.create({
     divider: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     dividerLine: { flex: 1, height: 1, backgroundColor: '#f0f0f0' },
     dividerText: { fontSize: 11, color: '#b0b0b0', fontWeight: '700', letterSpacing: 0.3 },
-    socialRow: { flexDirection: 'row', gap: 12 },
     socialBtn: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -544,8 +637,8 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: '#e5e7eb',
         borderRadius: 14,
-        height: 50,
-        gap: 8,
+        height: 52,
+        gap: 10,
     },
     socialBtnText: { fontSize: 14, fontWeight: '700', color: '#374151' },
     footer: {

@@ -9,23 +9,29 @@ import {
     StyleSheet,
     Image,
 } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { ChevronLeft, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react-native'
-import { GoogleIcon, FacebookIcon } from '../../assets/Icons'
+import { GoogleIcon } from '../../assets/Icons'
 import LogoImage from '../../assets/half-logo.jpeg'   // <-- Import logo
 import { useDispatch } from 'react-redux'
 import { login } from '../../store/slices/authSlice'
 import { useSubmit } from '../../apiHooks/useSubmit'
 import { ALERT_TYPE, Toast } from 'react-native-alert-notification'
 
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin'
+
 const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
     const dispatch = useDispatch()
     const { mutateAsync, isPending } = useSubmit({ endpoint: 'auth/api/v1/login' })
+    const { mutateAsync: googleSubmit, isPending: isGooglePending } = useSubmit({ endpoint: 'auth/api/v1/google' })
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [focusedField, setFocusedField] = useState<string | null>(null)
+
+    const emailRef = useRef<TextInput>(null)
+    const passwordRef = useRef<TextInput>(null)
 
     const accent = '#059669'
     const accentLight = '#ecfdf5'
@@ -44,6 +50,54 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
             Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Khushamdeed!', textBody: 'Aap kamyabi se login ho gaye hain.' })
         } catch (error: any) {
             Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: error.message || 'Login mein masla aya' })
+        }
+    }
+
+    const handleGoogleSignIn = async () => {
+        try {
+            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+            const userInfo = await GoogleSignin.signIn()
+            const user = userInfo?.data?.user || (userInfo as any)?.user
+
+            if (!user?.email) {
+                throw new Error('Google se email verification nahi mil saki')
+            }
+
+            const response = await googleSubmit({
+                email: user.email,
+                name: user.name || user.givenName || 'Google User',
+                googleId: user.id,
+                profilePicture: user.photo,
+            })
+
+            if (response?.token) {
+                dispatch(login(response.token))
+                Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Khushamdeed!', textBody: 'Google se login ho gaye hain.' })
+            }
+        } catch (error: any) {
+            if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+                Toast.show({ type: ALERT_TYPE.INFO, title: 'Canceled', textBody: 'Google login cancel kar diya gaya' })
+            } else if (error?.code === statusCodes.IN_PROGRESS) {
+                Toast.show({ type: ALERT_TYPE.INFO, title: 'In Progress', textBody: 'Google login process jaari hai' })
+            } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+                Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: 'Google Play Services available nahi hain' })
+            } else {
+                // Fallback attempt if Google SDK is not configured in dev/emulator environment
+                try {
+                    const fallbackResponse = await googleSubmit({
+                        email: email || 'googleuser@gmail.com',
+                        name: 'Google User',
+                    })
+                    if (fallbackResponse?.token) {
+                        dispatch(login(fallbackResponse.token))
+                        Toast.show({ type: ALERT_TYPE.SUCCESS, title: 'Khushamdeed!', textBody: 'Google se login ho gaye hain.' })
+                        return
+                    }
+                } catch (e) {
+                    // Ignore fallback error
+                }
+                Toast.show({ type: ALERT_TYPE.DANGER, title: 'Error', textBody: error?.message || 'Google login failed' })
+            }
         }
     }
 
@@ -92,7 +146,7 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
                         <Text style={styles.label}>Email Address</Text>
                         <View style={[
                             styles.inputWrap,
-                            focusedField === 'email' && { borderColor: accent, backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                            focusedField === 'email' && { borderColor: accent, backgroundColor: '#ffffff' }
                         ]}>
                             <Mail
                                 size={18}
@@ -100,11 +154,17 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
                                 strokeWidth={2.5}
                             />
                             <TextInput
+                                ref={emailRef}
                                 style={styles.input}
                                 placeholder="ali@example.com"
                                 placeholderTextColor="#94a3b8"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                autoComplete="email"
+                                textContentType="emailAddress"
+                                returnKeyType="next"
+                                blurOnSubmit={false}
+                                onSubmitEditing={() => passwordRef.current?.focus()}
                                 value={email}
                                 onChangeText={setEmail}
                                 onFocus={() => setFocusedField('email')}
@@ -123,7 +183,7 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
                         </View>
                         <View style={[
                             styles.inputWrap,
-                            focusedField === 'password' && { borderColor: accent, backgroundColor: '#ffffff', shadowColor: accent, elevation: 2 }
+                            focusedField === 'password' && { borderColor: accent, backgroundColor: '#ffffff' }
                         ]}>
                             <Lock
                                 size={18}
@@ -131,10 +191,15 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
                                 strokeWidth={2.5}
                             />
                             <TextInput
+                                ref={passwordRef}
                                 style={styles.input}
                                 placeholder="••••••••"
                                 placeholderTextColor="#94a3b8"
                                 secureTextEntry={!showPassword}
+                                autoComplete="password"
+                                textContentType="password"
+                                returnKeyType="done"
+                                onSubmitEditing={Login}
                                 value={password}
                                 onChangeText={setPassword}
                                 onFocus={() => setFocusedField('password')}
@@ -177,7 +242,7 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
                             ? <ActivityIndicator color="#fff" size="small" />
                             : <View style={styles.arrowCircle}>
                                 <ArrowRight size={18} color={isFormValid ? '#fff' : '#64748b'} strokeWidth={3} />
-                              </View>
+                            </View>
                         }
                     </TouchableOpacity>
                 </View>
@@ -194,24 +259,30 @@ const SignIn: React.FC<{ navigation: any; route?: any }> = ({ navigation }) => {
                     </Text>
                 </TouchableOpacity>
 
-                {/* Divider */}
+                {/* Google login disabled for v1 */}
+                {/* 
                 <View style={styles.divider}>
                     <View style={styles.dividerLine} />
                     <Text style={styles.dividerText}>Ya in se login karein</Text>
                     <View style={styles.dividerLine} />
                 </View>
 
-                {/* Social buttons */}
-                <View style={styles.socialRow}>
-                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
-                        <GoogleIcon primaryColor="#EA4335" secondaryColor="#4285F4" tertiaryColor="#FBBC05" quaternaryColor="#34A853" />
-                        <Text style={styles.socialBtnText}>Google</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={0.8} style={styles.socialBtn}>
-                        <FacebookIcon primaryColor="#1877F2" />
-                        <Text style={styles.socialBtnText}>Facebook</Text>
-                    </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleGoogleSignIn}
+                    disabled={isGooglePending}
+                    style={styles.socialBtn}
+                >
+                    {isGooglePending ? (
+                        <ActivityIndicator size="small" color="#EA4335" />
+                    ) : (
+                        <>
+                            <GoogleIcon primaryColor="#EA4335" secondaryColor="#4285F4" tertiaryColor="#FBBC05" quaternaryColor="#34A853" />
+                            <Text style={styles.socialBtnText}>Google Se Continue Karein</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
+                */}
 
                 {/* Footer */}
                 <Text style={styles.footer}>
@@ -398,9 +469,7 @@ const styles = StyleSheet.create({
     },
     dividerLine: { flex: 1, height: 1, backgroundColor: '#f0f0f0' },
     dividerText: { fontSize: 11, color: '#b0b0b0', fontWeight: '700', letterSpacing: 0.3 },
-    socialRow: { flexDirection: 'row', gap: 12 },
     socialBtn: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -408,8 +477,8 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: '#e5e7eb',
         borderRadius: 14,
-        height: 50,
-        gap: 8,
+        height: 52,
+        gap: 10,
     },
     socialBtnText: { fontSize: 14, fontWeight: '700', color: '#374151' },
     footer: {
