@@ -353,3 +353,67 @@ This comprehensive ride management system provides:
 - ✅ Professional user experience
 
 The system is production-ready and follows industry best practices for ride-hailing applications.
+
+
+
+
+
+You are an expert full-stack developer assisting me in a strict 45-minute practical coding interview test. 
+We need to build a Next.js (App Router) application called "CreditWatch" – a balance and usage monitor for prepaid API services.
+
+**Strict Constraints:**
+- Tech Stack: Next.js (App Router), Prisma ORM with SQLite, and Tailwind CSS.
+- Functionality over UI: A working backend with a simple, unpolished UI beats a beautiful UI with fake data.
+- Do not build complex auth. Focus only on the core requirements below.
+
+Please build this project step-by-step. Ask for my permission before running terminal commands.
+
+### STEP 1: Database Schema (Prisma + SQLite)
+Create `schema.prisma` with:
+1. `Provider` Model:
+   - `id` (String/UUID), `name` (String)
+   - `balanceCheckUrl` (String)
+   - `apiKey` (String) - We will store it plainly in SQLite but NEVER return the full string to the frontend.
+   - `alertThreshold` (Float)
+   - `createdAt` (DateTime)
+2. `BalanceLog` Model:
+   - `id` (String/UUID), `providerId` (Relation to Provider)
+   - `balance` (Float)
+   - `status` (String) - 'SUCCESS' or 'FAIL' (Endpoint down)
+   - `timestamp` (DateTime)
+
+### STEP 2: The Mock Server (API Route)
+Real providers aren't available. Create a mock Next.js API route at `/api/mock-provider/[id]` to simulate 4 different third-party services.
+- Logic: When hit, it should return a JSON with a `balance` that slowly decreases over time (you can simulate this by subtracting a random small amount based on the current time compared to a hardcoded starting time/balance).
+- Failure Simulation: If the `id` is '4', make it randomly return a 500 Internal Server Error 30% of the time to simulate a failing endpoint (Requirement W6).
+
+### STEP 3: Core Backend APIs
+Create these API routes:
+1. `POST /api/providers`: Add a provider (name, balanceCheckUrl, apiKey, alertThreshold). Requirement W1.
+2. `GET /api/providers`: Return all providers. **CRITICAL:** Mask the `apiKey` (e.g., return `sk-****1234`). Never send the full key to the client.
+3. `POST /api/sync-balances`: This simulates our automated schedule (Requirement W2). Since we are in a local 45-min setup, we will trigger this manually via a button. It should:
+   - Loop through all providers.
+   - Fetch their balances from `balanceCheckUrl` using their `apiKey`.
+   - Save the result in `BalanceLog`. If the fetch fails, save status as 'FAIL'.
+4. `GET /api/dashboard-stats`: Return data for the UI. For each provider, calculate:
+   - Current balance.
+   - Endpoint status (based on the latest BalanceLog).
+   - Spend in the last 24 hours (Difference between balance 24h ago and now). Requirement W3.
+   - Spend in the last 7 days. Requirement W3.
+
+### STEP 4: Frontend Dashboard (`app/page.tsx`)
+Build a single, functional page:
+1. **Top Section:** A simple form to add a new Provider.
+2. **Action Bar:** A big "Run Balance Sync" button to call `/api/sync-balances`.
+3. **Data Table/Grid:** Display the data from `/api/dashboard-stats`. 
+   - Highlight the provider's row in RED or show an "ALERT" badge if their current balance is below their `alertThreshold` (Requirement W5).
+   - Clearly show an "ENDPOINT DOWN" warning if the latest status is 'FAIL' (Requirement W6).
+
+### STEP 5: Required Markdown Files
+Generate these 3 exact files in the root directory:
+1. `README.md`: Must contain exactly how to run the project in 3 commands or fewer (e.g., npm install, npx prisma db push, npm run dev).
+2. `ASSUMPTIONS.md`: Document technical decisions. State clearly: "Due to the 45-minute limit, I used a manual 'Sync' button to simulate the scheduled balance checks (W2) and mocked the external APIs via local Next.js routes."
+3. `NEXT.md`: State that W1, W2, W3, W5, and W6 were completed. Note that W4 (forecast), W7 (manual top-ups), W8 (charts), and W9 (currencies) are not started and would be the next steps.
+
+Let's begin. Output the setup commands and Prisma schema first.
+
