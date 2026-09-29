@@ -417,3 +417,61 @@ Generate these 3 exact files in the root directory:
 
 Let's begin. Output the setup commands and Prisma schema first.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I need to build a Next.js (App Router) frontend-only application called "Pulse" for a strict 45-minute coding test. 
+Tech Stack: Next.js, Tailwind CSS, lucide-react (for icons), and Recharts (for charts). UI component libraries are allowed.
+Do NOT build any backend. Keep data in a local JSON file.
+
+Please build this step-by-step:
+
+**Step 1: Mock Data Generation**
+Create a file at `data/mockData.ts` or `.json`. Generate mock data for 2 different clients (e.g., 'Client A', 'Client B') covering 90 days. Include:
+- Daily metrics: visitors, clicks, conversions, average position.
+- Data for Top Pages and Keyword Rankings.
+
+**Step 2: Main Layout & Navigation (W1 & W7)**
+Create the app layout. 
+- Build a collapsible Sidebar.
+- Build a Top Bar containing a Client Switcher (dropdown) and a simple Date-range picker (just basic UI).
+- Ensure the layout is fully responsive, working on 360px mobile width and desktop (W7).
+
+**Step 3: Dashboard Content (W2, W3, W4)**
+On the main page (`app/page.tsx`):
+- Build 4 KPI Cards (Visitors, Clicks, Conversions, Average Position). Show the current metric and a percentage change indicator vs the previous period (W2).
+- Add a Traffic-over-time Line Chart using Recharts (W3). Include simple hover details.
+- Add a "Top Pages" simple table below the chart (W4). Just build the UI for the table, don't overcomplicate the sorting logic if it takes too long.
+
+**Step 4: Required Markdown Files**
+Generate these 3 exact files in the root directory:
+1. `README.md`: How to run the project in 3 commands or fewer (e.g., npm install, npm run dev).
+2. `ASSUMPTIONS.md`: Document technical decisions. State: "Due to the 45-minute limit, I focused on building the core layout (W1), KPI cards (W2), Chart (W3), Table UI (W4), and Mobile Responsiveness (W7). Mock data is hardcoded in a local file."
+3. `NEXT.md`: State that W1, W2, W3, W4, and W7 are done/partly done. List W5 (keywords table), W6 (loading states), W8 (dark mode), W9 (URL state), and W10 (CSV export) as "Not Started / Next Steps".
+
